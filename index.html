@@ -709,14 +709,39 @@
 <body>
 
 <header class="header">
-  <div class="header-title">RICKEY <span>AI</span> AGENT</div>
-  <div style="display:flex;align-items:center;gap:10px;">
+  <div>
+    <div class="header-title">RICKEY <span>AI</span> AGENT</div>
+    <div style="font-size:0.62rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v2.1.0</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <button onclick="openAPIKeySetup()" id="api-key-btn" style="background:rgba(220,38,38,0.1);border:1px solid rgba(220,38,38,0.3);color:#dc2626;border-radius:8px;padding:5px 10px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.7rem;cursor:pointer;" title="Set Claude API Key">🔑 API Key</button>
     <button id="pwa-install-btn" onclick="installPWA()" style="display:none;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;">
       📲 Install App
     </button>
-    <div class="status-dot" title="AI Active"></div>
+    <div class="status-dot" id="ai-status-dot" title="AI Status"></div>
   </div>
 </header>
+
+<!-- API KEY MODAL -->
+<div class="overlay" id="modal-apikey">
+  <div class="modal">
+    <div class="modal-title">🔑 Claude API Key</div>
+    <div style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.6;">
+      Get your free API key from <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent);">console.anthropic.com</a><br>
+      → Sign up → API Keys → Create Key<br>
+      <span style="color:#dc2626;">Key is saved on this device only. Never shared.</span>
+    </div>
+    <div class="form-group">
+      <label class="form-label">API Key</label>
+      <input class="form-input" id="claude-api-key-input" type="password" placeholder="sk-ant-api03-..." />
+    </div>
+    <div id="api-key-status" style="font-size:0.78rem;margin-top:6px;display:none;"></div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('modal-apikey')">Cancel</button>
+      <button class="btn btn-accent" onclick="testAndSaveAPIKey()">Test & Save</button>
+    </div>
+  </div>
+</div>
 
 <nav class="nav">
   <button class="nav-btn active" onclick="switchTab('todo',this)">
@@ -1528,21 +1553,45 @@ function save() {
 }
 
 // ============================================================
-// CLAUDE API CALL
+// CLAUDE API CALL — with proper headers + timeout
 // ============================================================
 async function callClaude(systemPrompt, userMsg) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userMsg }]
-    })
-  });
-  const data = await res.json();
-  return data.content?.map(b => b.text || "").join("") || "";
+  const apiKey = localStorage.getItem('rickey_claude_key') || '';
+  if (!apiKey) {
+    showToast('⚠️ Add your Claude API key in Settings');
+    throw new Error('No API key set');
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-request-headers": "true"
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userMsg }]
+      })
+    });
+    clearTimeout(timeout);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || 'API error ' + res.status);
+    }
+    const data = await res.json();
+    return data.content?.map(b => b.text || "").join("") || "";
+  } catch(e) {
+    clearTimeout(timeout);
+    if (e.name === 'AbortError') throw new Error('Timed out — check internet');
+    throw e;
+  }
 }
 
 // ============================================================
@@ -1575,18 +1624,15 @@ async function aiGenerateTodo() {
   const prompt = document.getElementById('todo-prompt').value.trim();
   if (!prompt) { showToast('Type something first!'); return; }
   document.getElementById('todo-thinking').classList.add('show');
-
   try {
-    const sys = `You are a task management AI for Shreeji Industries (aluminium/heatsink manufacturing business).
+    const sys = `You are a task management AI for a business owner named Rickey.
 Extract actionable tasks from user input and return ONLY valid JSON array, no markdown, no preamble.
 Each task object: { "text": string, "priority": "high"|"med"|"low", "category": string }
 Priority rules: payment/due/urgent = high, follow-up/call = med, general = low.
 Category examples: Payment, Sales, Stock, Delivery, Production, Admin.`;
-
     const raw = await callClaude(sys, prompt);
     const clean = raw.replace(/```json|```/gi, '').trim();
     const tasks = JSON.parse(clean);
-
     tasks.forEach(t => {
       todos.unshift({ id: uid(), text: t.text, priority: t.priority || 'med', category: t.category || 'General', done: false, created: new Date().toISOString() });
     });
@@ -1594,10 +1640,11 @@ Category examples: Payment, Sales, Stock, Delivery, Production, Admin.`;
     document.getElementById('todo-prompt').value = '';
     showToast(`✅ Added ${tasks.length} task(s)`);
   } catch(e) {
-    showToast('AI error — check API key or try again');
+    showToast('❌ ' + (e.message || 'AI error — try again'));
     console.error(e);
+  } finally {
+    document.getElementById('todo-thinking').classList.remove('show');
   }
-  document.getElementById('todo-thinking').classList.remove('show');
 }
 
 function addTodoManual() {
@@ -1671,7 +1718,6 @@ async function aiGenerateReminder() {
   const prompt = document.getElementById('rem-prompt').value.trim();
   if (!prompt) { showToast('Type something first!'); return; }
   document.getElementById('rem-thinking').classList.add('show');
-
   try {
     const today = new Date().toISOString().split('T')[0];
     const sys = `You are a business reminder AI for Rickey.
@@ -1679,11 +1725,9 @@ Extract payment/sales/call reminders. Return ONLY valid JSON array, no markdown.
 Each object: { "name": string, "type": "payment"|"sales"|"call", "amount": number|null, "dueDate": "YYYY-MM-DD"|null, "callTime": "HH:MM"|null, "note": string }
 Today is ${today}. Infer dates from context (e.g. "20th May" = current or next May 20). Extract time if mentioned (e.g. "at 11am" = "11:00", "3:30 pm" = "15:30").
 Amount only for payment type. If no amount, set null.`;
-
     const raw = await callClaude(sys, prompt);
     const clean = raw.replace(/```json|```/gi, '').trim();
     const items = JSON.parse(clean);
-
     items.forEach(r => {
       reminders.unshift({ id: uid(), name: r.name, type: r.type || 'call', amount: r.amount || null, dueDate: r.dueDate || null, callTime: r.callTime || null, note: r.note || '', done: false, created: new Date().toISOString() });
     });
@@ -1691,10 +1735,11 @@ Amount only for payment type. If no amount, set null.`;
     document.getElementById('rem-prompt').value = '';
     showToast(`📞 Added ${items.length} reminder(s)`);
   } catch(e) {
-    showToast('AI error — try again');
+    showToast('❌ ' + (e.message || 'AI error — try again'));
     console.error(e);
+  } finally {
+    document.getElementById('rem-thinking').classList.remove('show');
   }
-  document.getElementById('rem-thinking').classList.remove('show');
 }
 
 function addReminderManual() {
@@ -1796,32 +1841,23 @@ async function aiSaveNote() {
   const content = document.getElementById('note-prompt').value.trim();
   if (!content) { showToast('Type a note first!'); return; }
   document.getElementById('note-thinking').classList.add('show');
-
   try {
-    const sys = `You are a smart note organizer for Shreeji Industries (aluminium manufacturing).
+    const sys = `You are a smart note organizer for a business owner named Rickey.
 Analyze the note and return ONLY valid JSON (no markdown):
 { "title": string (short, descriptive), "summary": string (1-2 lines), "tags": string[] (3-6 relevant tags, lowercase), "body": string (formatted, keep full info) }`;
-
     const raw = await callClaude(sys, content);
     const clean = raw.replace(/```json|```/gi, '').trim();
     const note = JSON.parse(clean);
-
-    notes.unshift({
-      id: uid(),
-      title: note.title,
-      summary: note.summary,
-      tags: note.tags || [],
-      body: note.body || content,
-      created: new Date().toISOString()
-    });
+    notes.unshift({ id: uid(), title: note.title, summary: note.summary, tags: note.tags || [], body: note.body || content, created: new Date().toISOString() });
     save(); renderNotes();
     document.getElementById('note-prompt').value = '';
     showToast('📒 Note saved!');
   } catch(e) {
-    showToast('AI error — try again');
+    showToast('❌ ' + (e.message || 'AI error — try again'));
     console.error(e);
+  } finally {
+    document.getElementById('note-thinking').classList.remove('show');
   }
-  document.getElementById('note-thinking').classList.remove('show');
 }
 
 function addNoteManual() {
@@ -2659,6 +2695,94 @@ function clearAllData() {
 }
 
 // ============================================================
+// API KEY SETUP
+// ============================================================
+function openAPIKeySetup() {
+  const saved = localStorage.getItem('rickey_claude_key') || '';
+  document.getElementById('claude-api-key-input').value = saved ? '••••••••••••••••' : '';
+  document.getElementById('api-key-status').style.display = 'none';
+  document.getElementById('modal-apikey').classList.add('show');
+}
+
+async function testAndSaveAPIKey() {
+  const input = document.getElementById('claude-api-key-input').value.trim();
+  const status = document.getElementById('api-key-status');
+  if (!input || input.startsWith('•')) {
+    closeModal('modal-apikey');
+    return;
+  }
+  if (!input.startsWith('sk-ant-')) {
+    status.style.display = 'block';
+    status.style.color = '#dc2626';
+    status.textContent = '❌ Invalid key format — should start with sk-ant-';
+    return;
+  }
+  status.style.display = 'block';
+  status.style.color = 'var(--muted)';
+  status.textContent = '⏳ Testing key...';
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": input,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-request-headers": "true"
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 10,
+        messages: [{ role: "user", content: "Hi" }]
+      })
+    });
+    if (res.ok) {
+      localStorage.setItem('rickey_claude_key', input);
+      status.style.color = '#34a853';
+      status.textContent = '✅ API Key works! AI is ready.';
+      updateAIStatus(true);
+      document.getElementById('api-key-btn').style.background = 'rgba(52,168,83,0.1)';
+      document.getElementById('api-key-btn').style.borderColor = 'rgba(52,168,83,0.3)';
+      document.getElementById('api-key-btn').style.color = '#34a853';
+      document.getElementById('api-key-btn').textContent = '🔑 AI Ready';
+      setTimeout(() => closeModal('modal-apikey'), 1500);
+    } else {
+      const err = await res.json().catch(() => ({}));
+      status.style.color = '#dc2626';
+      status.textContent = '❌ ' + (err.error?.message || 'Invalid key');
+    }
+  } catch(e) {
+    status.style.color = '#dc2626';
+    status.textContent = '❌ Network error — check connection';
+  }
+}
+
+function updateAIStatus(active) {
+  const dot = document.getElementById('ai-status-dot');
+  if (dot) {
+    dot.style.background = active ? 'var(--accent)' : '#dc2626';
+    dot.style.boxShadow = active ? '0 0 8px var(--accent)' : '0 0 8px #dc2626';
+    dot.title = active ? 'AI Active' : 'API Key needed';
+  }
+}
+
+function checkAPIKeyOnLoad() {
+  const key = localStorage.getItem('rickey_claude_key');
+  if (key) {
+    updateAIStatus(true);
+    document.getElementById('api-key-btn').style.background = 'rgba(52,168,83,0.1)';
+    document.getElementById('api-key-btn').style.borderColor = 'rgba(52,168,83,0.3)';
+    document.getElementById('api-key-btn').style.color = '#34a853';
+    document.getElementById('api-key-btn').textContent = '🔑 AI Ready';
+  } else {
+    updateAIStatus(false);
+    // Auto open API key modal after 1 second if no key
+    setTimeout(() => {
+      showToast('⚠️ Add your Claude API key to use AI features');
+    }, 1000);
+  }
+}
+
+// ============================================================
 // INIT
 // ============================================================
 renderTodos();
@@ -2671,6 +2795,7 @@ renderMemoryDB();
 initTemplates();
 renderContactPicker();
 initGoogleTab();
+checkAPIKeyOnLoad();
 if (typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission();
 
 // Wire VCF import
