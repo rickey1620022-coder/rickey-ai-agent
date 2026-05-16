@@ -1,0 +1,3112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Rickey AI">
+<meta name="application-name" content="Rickey AI Agent">
+<meta name="theme-color" content="#7c3aed">
+<meta name="description" content="Rickey AI Agent — Smart business assistant">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<title>Rickey AI Agent</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f5f3ff;
+    --surface2: #ede9fe;
+    --border: #c4b5fd;
+    --accent: #7c3aed;
+    --accent2: #6d28d9;
+    --accent3: #dc2626;
+    --accent4: #d97706;
+    --text: #1a0533;
+    --muted: #6d28d9;
+    --radius: 14px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background glow */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -200px; left: -200px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(124,58,237,0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: -200px; right: -200px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(109,40,217,0.06) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Header */
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .header-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 1.3rem;
+    letter-spacing: -0.5px;
+  }
+  .header-title span { color: var(--accent); }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* Nav tabs */
+  .nav {
+    display: flex; gap: 4px;
+    padding: 16px 24px 0;
+    position: relative; z-index: 1;
+  }
+  .nav-btn {
+    padding: 10px 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    border-radius: 10px 10px 0 0;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600; font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; align-items: center; gap: 8px;
+    letter-spacing: 0.3px;
+    border-bottom: none;
+  }
+  .nav-btn:hover { color: var(--text); background: var(--surface2); }
+  .nav-btn.active { color: var(--text); background: var(--surface2); border-color: var(--accent); }
+  .nav-btn .icon { font-size: 1rem; }
+  .badge {
+    background: var(--accent3);
+    color: #fff;
+    border-radius: 20px;
+    padding: 1px 7px;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
+  /* Main */
+  main {
+    position: relative; z-index: 1;
+    max-width: 960px; margin: 0 auto;
+    padding: 0 24px 40px;
+  }
+
+  .tab { display: none; }
+  .tab.active { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+
+  /* Panel */
+  .panel {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 0 var(--radius) var(--radius) var(--radius);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .panel-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 0.85rem;
+    letter-spacing: 1px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 16px;
+  }
+
+  /* AI Input */
+  .ai-input-box {
+    display: flex; gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    transition: border-color 0.2s;
+  }
+  .ai-input-box:focus-within { border-color: var(--accent); }
+  .ai-input-box input, .ai-input-box textarea {
+    flex: 1; background: none; border: none; outline: none;
+    color: var(--text); font-family: 'DM Mono', monospace;
+    font-size: 0.88rem; resize: none;
+  }
+  .ai-input-box textarea { min-height: 60px; }
+  .btn {
+    padding: 9px 18px;
+    border-radius: 8px; border: none;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 0.8rem;
+    cursor: pointer; transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-accent:hover { background: #6d28d9; transform: translateY(-1px); }
+  .btn-blue { background: var(--accent2); color: #fff; }
+  .btn-blue:hover { background: #6fa0ff; }
+  .btn-red { background: var(--accent3); color: #fff; }
+  .btn-red:hover { opacity: 0.85; }
+  .btn-sm { padding: 5px 12px; font-size: 0.75rem; }
+  .btn-ghost {
+    background: none; border: 1px solid var(--border);
+    color: var(--muted); padding: 5px 12px;
+    font-family: 'DM Mono', monospace; font-size: 0.75rem;
+    cursor: pointer; border-radius: 6px; transition: all 0.2s;
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* AI Thinking */
+  .ai-thinking {
+    display: none;
+    align-items: center; gap: 10px;
+    color: var(--accent); font-size: 0.82rem;
+    padding: 10px 0;
+  }
+  .ai-thinking.show { display: flex; }
+  .dots span {
+    display: inline-block; width: 5px; height: 5px;
+    background: var(--accent); border-radius: 50%;
+    animation: dot 1.2s infinite;
+  }
+  .dots span:nth-child(2) { animation-delay: 0.2s; }
+  .dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dot { 0%,80%,100%{transform:scale(0.6);opacity:0.3} 40%{transform:scale(1);opacity:1} }
+
+  /* Todo Items */
+  .todo-list { display: flex; flex-direction: column; gap: 8px; }
+  .todo-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px;
+    transition: all 0.2s;
+  }
+  .todo-item:hover { border-color: #2e3450; }
+  .todo-item.done { opacity: 0.45; }
+  .todo-check {
+    width: 20px; height: 20px; min-width: 20px;
+    border: 2px solid var(--border);
+    border-radius: 6px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; margin-top: 1px;
+  }
+  .todo-check.checked { background: var(--accent); border-color: var(--accent); }
+  .todo-check.checked::after { content: '✓'; font-size: 0.7rem; color: #000; font-weight: 900; }
+  .todo-body { flex: 1; }
+  .todo-text { font-size: 0.88rem; line-height: 1.5; }
+  .todo-item.done .todo-text { text-decoration: line-through; }
+  .todo-meta { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+  .tag {
+    font-size: 0.7rem; padding: 2px 8px; border-radius: 20px;
+    font-family: 'Syne', sans-serif; font-weight: 600;
+  }
+  .tag-priority-high { background: rgba(220,38,38,0.1); color: #dc2626; border: 1px solid rgba(220,38,38,0.3); }
+  .tag-priority-med { background: rgba(217,119,6,0.1); color: #d97706; border: 1px solid rgba(217,119,6,0.3); }
+  .tag-priority-low { background: rgba(124,58,237,0.1); color: var(--accent); border: 1px solid rgba(124,58,237,0.2); }
+  .tag-cat { background: rgba(109,40,217,0.1); color: var(--accent2); border: 1px solid rgba(109,40,217,0.2); }
+  .todo-actions { display: flex; gap: 6px; align-items: flex-start; }
+  .icon-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 0.85rem; padding: 2px;
+    transition: color 0.2s; line-height: 1;
+  }
+  .icon-btn:hover { color: var(--accent3); }
+
+  /* Reminder Items */
+  .reminder-list { display: flex; flex-direction: column; gap: 8px; }
+  .reminder-item {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px;
+    transition: all 0.2s;
+  }
+  .reminder-item.overdue { border-color: rgba(255,107,107,0.4); }
+  .reminder-item.today { border-color: rgba(255,209,102,0.4); }
+  .reminder-icon {
+    width: 40px; height: 40px; min-width: 40px;
+    border-radius: 10px; display: flex; align-items: center;
+    justify-content: center; font-size: 1.2rem;
+  }
+  .reminder-icon.payment { background: rgba(220,38,38,0.1); }
+  .reminder-icon.sales { background: rgba(109,40,217,0.1); }
+  .reminder-icon.call { background: rgba(124,58,237,0.08); }
+  .reminder-body { flex: 1; }
+  .reminder-title { font-size: 0.9rem; font-weight: 500; margin-bottom: 4px; }
+  .reminder-sub { font-size: 0.76rem; color: var(--muted); }
+  .reminder-amount { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; }
+  .due-badge {
+    font-size: 0.72rem; padding: 3px 9px; border-radius: 20px;
+    font-family: 'Syne', sans-serif; font-weight: 600; white-space: nowrap;
+  }
+  .due-overdue { background: rgba(220,38,38,0.1); color: #dc2626; }
+  .due-today { background: rgba(217,119,6,0.1); color: #d97706; }
+  .due-soon { background: rgba(109,40,217,0.1); color: var(--accent2); }
+  .due-ok { background: rgba(124,58,237,0.08); color: var(--accent); }
+
+  /* Notes */
+  .notes-grid { display: flex; flex-direction: column; gap: 8px; }
+  .note-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px;
+    transition: all 0.2s; cursor: pointer;
+  }
+  .note-card:hover { border-color: var(--accent2); }
+  .note-card-title {
+    font-family: 'Syne', sans-serif; font-weight: 700;
+    font-size: 0.9rem; margin-bottom: 6px;
+  }
+  .note-card-body { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+  .note-card-footer {
+    display: flex; gap: 6px; align-items: center;
+    margin-top: 10px; flex-wrap: wrap;
+  }
+  .note-card-date { font-size: 0.72rem; color: var(--muted); margin-left: auto; }
+
+  /* Search bar */
+  .search-bar {
+    display: flex; gap: 10px; margin-bottom: 16px;
+  }
+  .search-bar input {
+    flex: 1; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 14px; color: var(--text);
+    font-family: 'DM Mono', monospace; font-size: 0.85rem;
+    outline: none; transition: border-color 0.2s;
+  }
+  .search-bar input:focus { border-color: var(--accent); }
+
+  /* Add form modal */
+  .overlay {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .overlay.show { display: flex; }
+  .modal {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 28px; width: 100%; max-width: 480px;
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:none;opacity:1} }
+  .modal-title {
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem;
+    margin-bottom: 20px;
+  }
+  .form-group { margin-bottom: 14px; }
+  .form-label {
+    display: block; font-size: 0.75rem;
+    color: var(--muted); margin-bottom: 6px;
+    font-family: 'Syne', sans-serif; font-weight: 600; letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .form-input, .form-select, .form-textarea {
+    width: 100%; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 12px; color: var(--text);
+    font-family: 'DM Mono', monospace; font-size: 0.85rem;
+    outline: none; transition: border-color 0.2s;
+  }
+  .form-select { appearance: none; }
+  .form-textarea { resize: vertical; min-height: 80px; }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
+  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .stat-card {
+    flex: 1; min-width: 100px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px;
+    text-align: center;
+  }
+  .stat-num {
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.5rem;
+    line-height: 1;
+  }
+  .stat-label { font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+
+  /* Note detail overlay */
+  .note-detail {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .note-detail.show { display: flex; }
+  .note-detail-box {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 28px;
+    width: 100%; max-width: 600px; max-height: 80vh;
+    overflow-y: auto; animation: slideUp 0.3s ease;
+  }
+  .note-detail-title {
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.2rem;
+    margin-bottom: 12px;
+  }
+  .note-detail-body {
+    font-size: 0.88rem; line-height: 1.8; color: var(--text);
+    white-space: pre-wrap;
+  }
+  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+  /* Empty state */
+  .empty {
+    text-align: center; padding: 40px 20px; color: var(--muted);
+    font-size: 0.85rem;
+  }
+  .empty .big { font-size: 2rem; margin-bottom: 8px; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 30px; right: 24px; z-index: 999;
+    background: var(--accent); color: #fff;
+    padding: 10px 18px; border-radius: 8px;
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.82rem;
+    transform: translateY(20px); opacity: 0;
+    transition: all 0.3s; pointer-events: none;
+  }
+  .toast.show { transform: none; opacity: 1; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #c4b5fd; border-radius: 3px; }
+
+  /* Mic button */
+  .mic-btn {
+    width: 36px; height: 36px; min-width: 36px;
+    border-radius: 50%; border: 2px solid var(--border);
+    background: var(--surface); color: var(--muted);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 1rem; transition: all 0.2s;
+    align-self: center;
+  }
+  .mic-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .mic-btn.recording {
+    background: #dc2626; border-color: #dc2626; color: #fff;
+    animation: micPulse 1s infinite;
+  }
+  @keyframes micPulse {
+    0%,100%{ box-shadow: 0 0 0 0 rgba(220,38,38,0.4); }
+    50%{ box-shadow: 0 0 0 8px rgba(220,38,38,0); }
+  }
+  .voice-label {
+    font-size: 0.72rem; color: var(--muted);
+    text-align: center; margin-top: 4px;
+    font-family: 'Syne', sans-serif;
+  }
+  .voice-label.recording { color: #dc2626; }
+
+  /* Notes photo */
+  .photo-tag-bar {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; align-items: center;
+  }
+  .photo-tag-chip {
+    font-size: 0.72rem; padding: 4px 10px; border-radius: 20px;
+    font-family: 'Syne', sans-serif; font-weight: 600;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--muted); cursor: pointer; transition: all 0.2s;
+  }
+  .photo-tag-chip.active, .photo-tag-chip:hover {
+    background: var(--accent); border-color: var(--accent); color: #fff;
+  }
+  .photo-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 10px; margin-bottom: 16px;
+  }
+  .photo-item {
+    position: relative; border-radius: 10px; overflow: hidden;
+    border: 1px solid var(--border); aspect-ratio: 1; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .photo-item:hover { border-color: var(--accent); transform: scale(1.02); }
+  .photo-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .photo-item-tags {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(0,0,0,0.55); padding: 4px 6px;
+    display: flex; gap: 3px; flex-wrap: wrap;
+  }
+  .photo-item-tag { font-size: 0.62rem; color: #fff; font-family: 'Syne', sans-serif; font-weight: 600; }
+  .photo-del {
+    position: absolute; top: 4px; right: 4px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: rgba(220,38,38,0.85); border: none;
+    color: #fff; font-size: 0.7rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .photo-item:hover .photo-del { opacity: 1; }
+
+  /* Photo lightbox */
+  .lightbox {
+    display: none; position: fixed; inset: 0; z-index: 300;
+    background: rgba(0,0,0,0.92); align-items: center; justify-content: center;
+  }
+  .lightbox.show { display: flex; }
+  .lightbox img { max-width: 90vw; max-height: 85vh; border-radius: 10px; }
+  .lightbox-close {
+    position: absolute; top: 20px; right: 24px;
+    background: rgba(255,255,255,0.15); border: none; color: #fff;
+    font-size: 1.4rem; cursor: pointer; border-radius: 50%;
+    width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Call time in reminders */
+  .call-time-badge {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 0.72rem; font-family: 'Syne', sans-serif; font-weight: 600;
+    color: var(--accent); background: rgba(124,58,237,0.08);
+    border: 1px solid rgba(124,58,237,0.2); border-radius: 6px;
+    padding: 2px 7px; margin-top: 4px; width: fit-content;
+  }
+  .form-row { display: flex; gap: 10px; }
+  .form-row .form-group { flex: 1; margin-bottom: 0; }
+
+  /* WhatsApp */
+  .wa-btn-send {
+    background: #25d366; color: #fff; flex:1; min-width:140px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    font-size:0.88rem;
+  }
+  .wa-btn-send:hover { background: #1da851; transform:translateY(-1px); }
+  .wa-btn-schedule {
+    background: var(--accent2); color: #fff; flex:1; min-width:140px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    font-size:0.88rem;
+  }
+  .wa-btn-schedule:hover { background: #5b21b6; transform:translateY(-1px); }
+  .wa-bubble {
+    background: #e7fbe6; border-radius: 0 12px 12px 12px;
+    padding: 12px 14px; font-size: 0.88rem; line-height: 1.7;
+    color: #1a1a1a; white-space: pre-wrap;
+    border: 1px solid #c3f0c8; position:relative;
+    max-height: 200px; overflow-y:auto;
+  }
+  .wa-bubble::before {
+    content:''; position:absolute; top:0; left:-8px;
+    border:8px solid transparent; border-right-color:#e7fbe6;
+    border-top:0; margin-top:0;
+  }
+  .wa-sched-item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;
+    display:flex; gap:12px; align-items:flex-start;
+  }
+  .wa-sched-item.fired { opacity: 0.45; }
+  .wa-sched-icon {
+    width:36px; height:36px; min-width:36px; border-radius:10px;
+    background:#e7fbe6; display:flex; align-items:center;
+    justify-content:center; font-size:1.1rem;
+  }
+  .wa-sched-body { flex:1; }
+  .wa-sched-to { font-size:0.85rem; font-weight:600; margin-bottom:3px; }
+  .wa-sched-msg { font-size:0.78rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:240px; }
+  .wa-sched-time { font-size:0.72rem; font-family:'Syne',sans-serif; font-weight:700; color:#25d366; margin-top:4px; }
+  /* WA subtabs */
+  .wa-subtabs {
+    display:flex; gap:4px; margin-bottom:16px; flex-wrap:wrap;
+    border-bottom:1px solid var(--border); padding-bottom:0;
+  }
+  .wa-subtab {
+    padding:8px 14px; border:none; background:none;
+    font-family:'Syne',sans-serif; font-weight:600; font-size:0.78rem;
+    color:var(--muted); cursor:pointer; border-bottom:2px solid transparent;
+    transition:all 0.2s; margin-bottom:-1px;
+  }
+  .wa-subtab:hover { color:var(--text); }
+  .wa-subtab.active { color:var(--accent); border-bottom-color:var(--accent); }
+
+  /* Contact card */
+  .contact-card {
+    display:flex; align-items:center; gap:12px;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; padding:12px 14px; margin-bottom:8px;
+    transition:all 0.2s;
+  }
+  .contact-avatar {
+    width:40px; height:40px; min-width:40px; border-radius:50%;
+    background:var(--accent); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Syne',sans-serif; font-weight:800; font-size:1rem;
+  }
+  .contact-avatar.supplier { background:#d97706; }
+  .contact-avatar.staff    { background:#6d28d9; }
+  .contact-avatar.other    { background:#6b7280; }
+  .contact-body { flex:1; }
+  .contact-name { font-family:'Syne',sans-serif; font-weight:700; font-size:0.9rem; }
+  .contact-phone { font-size:0.78rem; color:var(--muted); margin-top:2px; }
+  .contact-note { font-size:0.75rem; color:var(--muted); margin-top:2px; font-style:italic; }
+  .contact-actions { display:flex; gap:6px; }
+  .wa-contact-chip {
+    display:inline-flex; align-items:center; gap:5px;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:20px; padding:4px 10px; font-size:0.75rem;
+    font-family:'Syne',sans-serif; font-weight:600; cursor:pointer;
+    transition:all 0.2s; color:var(--text);
+  }
+  .wa-contact-chip:hover { border-color:#25d366; color:#25d366; }
+
+  /* Template card */
+  .template-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; padding:12px 14px; margin-bottom:8px;
+  }
+  .template-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .template-name { font-family:'Syne',sans-serif; font-weight:700; font-size:0.88rem; }
+  .template-body { font-size:0.8rem; color:var(--muted); line-height:1.5; margin-bottom:8px; }
+  .template-actions { display:flex; gap:6px; flex-wrap:wrap; }
+  .db-location-row {
+    display:flex; gap:12px; align-items:flex-start;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; padding:10px 12px;
+  }
+  .db-loc-icon { font-size:1.2rem; min-width:24px; }
+  .db-location-row code {
+    background:rgba(124,58,237,0.1); color:var(--accent);
+    padding:1px 6px; border-radius:4px; font-size:0.82rem;
+  }
+  .db-key-row {
+    display:flex; align-items:center; gap:10px;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:8px; padding:10px 12px;
+  }
+  .db-key-name {
+    font-family:'DM Mono',monospace; font-size:0.8rem;
+    color:var(--accent); flex:1;
+  }
+  .db-key-size { font-size:0.75rem; color:var(--muted); white-space:nowrap; }
+  .db-key-count { font-family:'Syne',sans-serif; font-weight:700; font-size:0.78rem; color:var(--text); white-space:nowrap; }
+
+  /* Google tab */
+  .g-status-bar {
+    display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;
+    padding:10px 14px; background:var(--surface);
+    border:1px solid var(--border); border-radius:10px;
+  }
+  .g-status-item { display:flex; align-items:center; gap:6px; font-size:0.78rem; font-family:'Syne',sans-serif; font-weight:600; }
+  .g-dot { width:8px; height:8px; border-radius:50%; }
+  .g-dot.connected { background:#34a853; box-shadow:0 0 6px #34a853; }
+  .g-dot.disconnected { background:var(--muted); }
+  .g-step-row {
+    display:flex; gap:12px; align-items:flex-start;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:8px; padding:10px 12px; font-size:0.8rem; line-height:1.6;
+  }
+  .g-step-num {
+    min-width:24px; height:24px; border-radius:50%;
+    background:var(--accent); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Syne',sans-serif; font-weight:800; font-size:0.75rem;
+  }
+  .g-link { color:#4285f4; text-decoration:none; font-weight:600; }
+  .g-link:hover { text-decoration:underline; }
+  .g-code {
+    background:rgba(66,133,244,0.1); color:#4285f4;
+    padding:2px 8px; border-radius:4px; font-size:0.78rem;
+    font-family:'DM Mono',monospace; word-break:break-all;
+  }
+  .g-btn-connect {
+    background:#4285f4; color:#fff; width:100%; margin-top:4px;
+    font-size:0.88rem; padding:11px;
+  }
+  .g-btn-connect:hover { background:#3367d6; }
+  .g-btn-blue { background:#4285f4; color:#fff; }
+  .g-btn-blue:hover { background:#3367d6; transform:translateY(-1px); }
+  .g-btn-send-email { background:#ea4335; color:#fff; }
+  .g-btn-send-email:hover { background:#c5221f; }
+  @media(max-width: 600px) {
+    .panel { padding: 16px; }
+  /* ===== PWA & MOBILE ===== */
+  /* Safe area for iPhone notch/home bar */
+  .header { padding-top: max(16px, calc(10px + env(safe-area-inset-top))); }
+  main { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+
+  /* Mobile bottom nav */
+  .mobile-nav {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+    background: rgba(255,255,255,0.97);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    padding: 4px 0 calc(4px + env(safe-area-inset-bottom));
+    flex-direction: row; align-items: stretch;
+  }
+  .mobile-nav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 2px;
+    background: none; border: none; cursor: pointer;
+    padding: 6px 2px; color: var(--muted);
+    font-family: 'Syne', sans-serif; font-size: 0.56rem;
+    font-weight: 700; letter-spacing: 0.2px;
+    transition: color 0.15s; position: relative;
+  }
+  .mobile-nav-btn .mn-icon { font-size: 1.25rem; line-height: 1; }
+  .mobile-nav-btn.active { color: var(--accent); }
+  .mobile-nav-btn.active .mn-icon {
+    transform: translateY(-1px);
+    filter: drop-shadow(0 0 4px rgba(124,58,237,0.4));
+  }
+  .mn-badge {
+    position: absolute; top: 3px; right: calc(50% - 18px);
+    background: var(--accent3); color: #fff;
+    border-radius: 10px; padding: 0 4px; font-size: 0.58rem;
+    font-weight: 800; min-width: 14px; text-align: center;
+    line-height: 14px; height: 14px;
+  }
+
+  @media(max-width: 700px) {
+    .nav { display: none; }
+    .mobile-nav { display: flex; }
+    main {
+      padding-bottom: calc(76px + env(safe-area-inset-bottom));
+      padding-left: 12px; padding-right: 12px;
+    }
+    .panel { padding: 14px 12px; border-radius: 12px; }
+    .photo-grid { grid-template-columns: repeat(auto-fill, minmax(100px,1fr)); }
+    .wa-sched-msg { max-width: 140px; }
+    .stats-bar { gap: 6px; }
+    .stat-card { padding: 10px 8px; min-width: 70px; }
+    .stat-num { font-size: 1.2rem; }
+    .btn { padding: 10px 14px; font-size: 0.78rem; }
+    .modal { padding: 20px 16px; }
+    .form-row { flex-direction: column; gap: 10px; }
+    .ai-input-box input, .ai-input-box textarea { font-size: 0.85rem; }
+    .wa-subtabs { gap: 2px; }
+    .wa-subtab { padding: 8px 10px; font-size: 0.72rem; }
+  }
+  @media(min-width: 701px) {
+    .mobile-nav { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-title">RICKEY <span>AI</span> AGENT</div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <button id="pwa-install-btn" onclick="installPWA()" style="display:none;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;">
+      📲 Install App
+    </button>
+    <div class="status-dot" title="AI Active"></div>
+  </div>
+</header>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="switchTab('todo',this)">
+    <span class="icon">✅</span> <span class="label">To-Do</span>
+    <span class="badge" id="todo-badge">0</span>
+  </button>
+  <button class="nav-btn" onclick="switchTab('reminders',this)">
+    <span class="icon">📞</span> <span class="label">Reminders</span>
+    <span class="badge" id="rem-badge" style="background:var(--accent4);color:#fff">0</span>
+  </button>
+  <button class="nav-btn" onclick="switchTab('notes',this)">
+    <span class="icon">📒</span> <span class="label">Notes DB</span>
+  </button>
+  <button class="nav-btn" onclick="switchTab('whatsapp',this)">
+    <span class="icon">💬</span> <span class="label">WhatsApp</span>
+    <span class="badge" id="wa-badge" style="background:#25d366;color:#fff">0</span>
+  </button>
+  <button class="nav-btn" onclick="switchTab('memory',this)">
+    <span class="icon">🗄️</span> <span class="label">Memory DB</span>
+  </button>
+  <button class="nav-btn" onclick="switchTab('google',this)">
+    <span class="icon">🔗</span> <span class="label">Google</span>
+    <span class="badge" id="g-badge" style="background:#4285f4;color:#fff;display:none;">●</span>
+  </button>
+</nav>
+
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mobile-nav" id="mobile-nav">
+  <button class="mobile-nav-btn active" id="mn-todo" onclick="switchTabMobile('todo',this)">
+    <span class="mn-icon">✅</span>
+    <span id="mn-todo-badge" class="mn-badge" style="display:none;"></span>
+    Tasks
+  </button>
+  <button class="mobile-nav-btn" id="mn-reminders" onclick="switchTabMobile('reminders',this)">
+    <span class="mn-icon">📞</span>
+    <span id="mn-rem-badge" class="mn-badge" style="display:none;"></span>
+    Remind
+  </button>
+  <button class="mobile-nav-btn" id="mn-notes" onclick="switchTabMobile('notes',this)">
+    <span class="mn-icon">📒</span>
+    Notes
+  </button>
+  <button class="mobile-nav-btn" id="mn-whatsapp" onclick="switchTabMobile('whatsapp',this)">
+    <span class="mn-icon">💬</span>
+    <span id="mn-wa-badge" class="mn-badge" style="background:#25d366;display:none;"></span>
+    WA
+  </button>
+  <button class="mobile-nav-btn" id="mn-google" onclick="switchTabMobile('google',this)">
+    <span class="mn-icon">🔗</span>
+    Google
+  </button>
+  <button class="mobile-nav-btn" id="mn-memory" onclick="switchTabMobile('memory',this)">
+    <span class="mn-icon">🗄️</span>
+    DB
+  </button>
+</nav>
+
+<main>
+
+<!-- ========== TO-DO TAB ========== -->
+<div class="tab active" id="tab-todo">
+  <div class="panel">
+    <div class="panel-title">🤖 AI Task Generator</div>
+    <div style="display:flex;gap:10px;align-items:flex-start;">
+      <div class="ai-input-box" style="flex:1;margin-bottom:0;">
+        <input type="text" id="todo-prompt" placeholder="Tell AI what to add... e.g. 'Follow up with Raj for payment, call new client tomorrow'" />
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;">
+        <button class="mic-btn" id="mic-todo" onclick="startVoice('todo-prompt','mic-todo','mic-todo-label')" title="Speak your task">🎤</button>
+        <div class="voice-label" id="mic-todo-label">Tap</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+      <button class="btn btn-accent" onclick="aiGenerateTodo()">⚡ Generate with AI</button>
+      <button class="btn btn-blue" onclick="openAddTodo()">+ Add Manually</button>
+      <button class="btn-ghost" onclick="clearDone()">Clear Done</button>
+    </div>
+    <div class="ai-thinking" id="todo-thinking">
+      <div class="dots"><span></span><span></span><span></span></div> AI is thinking...
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-num" id="s-total">0</div>
+      <div class="stat-label">Total Tasks</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="s-done" style="color:var(--accent)">0</div>
+      <div class="stat-label">Completed</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="s-high" style="color:var(--accent3)">0</div>
+      <div class="stat-label">High Priority</div>
+    </div>
+  </div>
+
+  <div class="todo-list" id="todo-list">
+    <div class="empty"><div class="big">✅</div>Tell AI to generate tasks or add manually</div>
+  </div>
+</div>
+
+<!-- ========== REMINDERS TAB ========== -->
+<div class="tab" id="tab-reminders">
+  <div class="panel">
+    <div class="panel-title">🤖 AI Reminder Creator</div>
+    <div style="display:flex;gap:10px;align-items:flex-start;">
+      <div class="ai-input-box" style="flex:1;margin-bottom:0;">
+        <input type="text" id="rem-prompt" placeholder="e.g. 'Call Mehta bhai for ₹45000 payment due 20th May, follow up with XYZ for order'" />
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;">
+        <button class="mic-btn" id="mic-rem" onclick="startVoice('rem-prompt','mic-rem','mic-rem-label')" title="Speak your reminder">🎤</button>
+        <div class="voice-label" id="mic-rem-label">Tap</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+      <button class="btn btn-accent" onclick="aiGenerateReminder()">⚡ Generate with AI</button>
+      <button class="btn btn-blue" onclick="openAddReminder()">+ Add Manually</button>
+    </div>
+    <div class="ai-thinking" id="rem-thinking">
+      <div class="dots"><span></span><span></span><span></span></div> AI is thinking...
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-num" id="r-overdue" style="color:var(--accent3)">0</div>
+      <div class="stat-label">Overdue</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="r-today" style="color:var(--accent4)">0</div>
+      <div class="stat-label">Today</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="r-total">0</div>
+      <div class="stat-label">Total</div>
+    </div>
+  </div>
+
+  <div class="reminder-list" id="reminder-list">
+    <div class="empty"><div class="big">📞</div>Add payment & sales call reminders</div>
+  </div>
+</div>
+
+<!-- ========== NOTES TAB ========== -->
+<div class="tab" id="tab-notes">
+  <div class="panel">
+    <div class="panel-title">🤖 AI Smart Notes</div>
+    <div style="display:flex;gap:10px;align-items:flex-start;">
+      <div class="ai-input-box" style="flex:1;margin-bottom:0;flex-direction:column;">
+        <textarea id="note-prompt" placeholder="Dump any note here... AI will auto-title, tag & save it. e.g. 'Meeting with Patel - he wants 500kg aluminium sheet 2mm, delivery by June 1'"></textarea>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;">
+        <button class="mic-btn" id="mic-note" onclick="startVoice('note-prompt','mic-note','mic-note-label')" title="Speak your note">🎤</button>
+        <div class="voice-label" id="mic-note-label">Tap</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+      <button class="btn btn-accent" onclick="aiSaveNote()">⚡ AI Save Note</button>
+      <button class="btn btn-blue" onclick="openAddNote()">+ Add Manually</button>
+    </div>
+    <div class="ai-thinking" id="note-thinking">
+      <div class="dots"><span></span><span></span><span></span></div> AI is processing note...
+    </div>
+  </div>
+
+  <div class="search-bar">
+    <input type="text" id="note-search" placeholder="🔍 Search notes by title, tag, or content..." oninput="searchNotes()" />
+  </div>
+
+  <!-- PHOTOS SECTION -->
+  <div class="panel" style="margin-bottom:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div class="panel-title" style="margin-bottom:0;">📷 Photo Gallery</div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-accent btn-sm" onclick="document.getElementById('photo-camera').click()" style="padding:6px 12px;font-size:0.78rem;">📸 Camera</button>
+        <button class="btn btn-blue btn-sm"   onclick="document.getElementById('photo-upload').click()" style="padding:6px 12px;font-size:0.78rem;">🖼 Gallery</button>
+      </div>
+      <!-- Camera input — captures directly from camera on mobile -->
+      <input type="file" id="photo-camera" accept="image/*" capture="environment" style="display:none;" />
+      <!-- Gallery input — pick from files -->
+      <input type="file" id="photo-upload" accept="image/*" multiple style="display:none;" />
+    </div>
+    <div class="photo-tag-bar" id="photo-tag-bar">
+      <span class="photo-tag-chip active" onclick="filterPhotos('all',this)">All</span>
+    </div>
+    <div class="photo-grid" id="photo-grid">
+      <div class="empty" style="grid-column:1/-1;padding:20px 0;"><div class="big">📷</div>Tap Camera or Gallery to add photos</div>
+    </div>
+  </div>
+
+  <div class="notes-grid" id="notes-grid">
+    <div class="empty"><div class="big">📒</div>Your smart notes will appear here</div>
+  </div>
+</div>
+
+<!-- ========== WHATSAPP TAB ========== -->
+<div class="tab" id="tab-whatsapp">
+
+  <!-- Sub tabs -->
+  <div class="wa-subtabs">
+    <button class="wa-subtab active" onclick="waSubTab('compose',this)">✍️ Compose</button>
+    <button class="wa-subtab" onclick="waSubTab('contacts',this)">👥 Contacts</button>
+    <button class="wa-subtab" onclick="waSubTab('templates',this)">⚡ Templates</button>
+    <button class="wa-subtab" onclick="waSubTab('scheduled',this)">⏰ Scheduled</button>
+  </div>
+
+  <!-- ===== COMPOSE ===== -->
+  <div class="wa-section" id="was-compose">
+
+    <!-- Quick contact picker -->
+    <div id="wa-contact-picker" style="margin-bottom:12px;display:none;">
+      <div style="font-size:0.75rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:600;margin-bottom:6px;letter-spacing:0.5px;text-transform:uppercase;">Quick Pick Contact</div>
+      <div id="wa-contact-chips" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">🤖 AI Compose</div>
+      <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;">
+        <div style="flex:1;">
+          <input class="form-input" id="wa-contact-name" placeholder="To: Name or pick contact above" style="margin-bottom:8px;" oninput="filterContactPicker(this.value)" />
+          <div class="ai-input-box" style="margin-bottom:0;flex-direction:column;">
+            <textarea id="wa-ai-prompt" placeholder="What to say? e.g. 'Payment reminder ₹45000 due today, ask politely when they will pay'" style="min-height:55px;"></textarea>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <button class="mic-btn" id="mic-wa" onclick="startVoice('wa-ai-prompt','mic-wa','mic-wa-label')">🎤</button>
+          <div class="voice-label" id="mic-wa-label">Tap</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-accent" onclick="aiComposeWA()">⚡ AI Write</button>
+        <button class="btn-ghost" onclick="clearWACompose()">Clear</button>
+      </div>
+      <div class="ai-thinking" id="wa-thinking">
+        <div class="dots"><span></span><span></span><span></span></div> AI writing...
+      </div>
+    </div>
+
+    <!-- Message preview + send -->
+    <div id="wa-compose-area" style="display:none;">
+      <div class="panel" style="border-color:#25d366;">
+        <div class="panel-title" style="color:#25d366;">💬 Message</div>
+        <div class="wa-bubble" id="wa-preview-text"></div>
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+          <button class="btn-ghost btn-sm" onclick="editWAMessage()">✏️ Edit</button>
+          <button class="btn-ghost btn-sm" onclick="aiRewriteWA('shorter')">↓ Short</button>
+          <button class="btn-ghost btn-sm" onclick="aiRewriteWA('more formal')">🎩 Formal</button>
+          <button class="btn-ghost btn-sm" onclick="aiRewriteWA('friendlier')">😊 Friendly</button>
+          <button class="btn-ghost btn-sm" onclick="copyWAMessage()">📋 Copy</button>
+        </div>
+      </div>
+      <div id="wa-edit-area" style="display:none;" class="panel">
+        <div class="panel-title">✏️ Edit</div>
+        <textarea class="form-textarea" id="wa-edit-text" style="min-height:100px;width:100%;"></textarea>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn btn-accent" onclick="applyWAEdit()">Apply</button>
+          <button class="btn-ghost" onclick="cancelWAEdit()">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Send panel -->
+      <div class="panel">
+        <div class="panel-title">📤 Send To</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+          <input class="form-input" id="wa-phone" placeholder="Number: 919876543210" style="flex:1;" />
+          <button class="btn-ghost btn-sm" onclick="openPickContact()">👥 Pick</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn wa-btn-send" onclick="sendWANow()">📲 Open WhatsApp</button>
+          <button class="btn wa-btn-schedule" onclick="openScheduleWA()">⏰ Schedule</button>
+        </div>
+        <div id="wa-schedule-area" style="display:none;margin-top:12px;">
+          <div class="divider"></div>
+          <div class="form-row" style="margin-top:12px;margin-bottom:10px;">
+            <div class="form-group">
+              <label class="form-label">📅 Date</label>
+              <input class="form-input" id="wa-sched-date" type="date" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">⏰ Time</label>
+              <input class="form-input" id="wa-sched-time" type="time" />
+            </div>
+          </div>
+          <div class="wa-schedule-info">At scheduled time WhatsApp opens with message pre-filled — just tap Send once.</div>
+          <button class="btn btn-accent" style="margin-top:10px;width:100%;" onclick="scheduleWASend()">⏰ Schedule</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CONTACTS ===== -->
+  <div class="wa-section" id="was-contacts" style="display:none;">
+
+    <!-- How to export from phone -->
+    <div class="panel" style="border-color:#25d366;background:rgba(37,211,102,0.04);margin-bottom:12px;">
+      <div class="panel-title" style="color:#25d366;margin-bottom:10px;">📱 Import From Your Phone</div>
+      <div style="font-size:0.82rem;line-height:1.8;color:var(--text);">
+        <strong>Android:</strong> Contacts app → Menu → Export → Save as .vcf → Share file here<br>
+        <strong>iPhone:</strong> Use "Contacts+" app (free) → Export .vcf → Share file here<br>
+        <strong>Or</strong> export from Google Contacts → contacts.google.com → Export
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+        <button class="btn btn-accent" onclick="document.getElementById('vcf-upload').click()">📂 Import .vcf File</button>
+        <input type="file" id="vcf-upload" accept=".vcf,.vcard,text/vcard,text/x-vcard" style="display:none;" />
+        <a href="https://contacts.google.com" target="_blank" class="btn-ghost" style="text-decoration:none;display:flex;align-items:center;padding:5px 12px;border-radius:6px;font-size:0.75rem;">🌐 Google Contacts</a>
+      </div>
+      <div id="vcf-import-status" style="margin-top:8px;font-size:0.78rem;color:#25d366;display:none;"></div>
+    </div>
+
+    <div class="panel">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="panel-title" style="margin-bottom:0;">👥 Contact Book <span id="contact-total-badge" style="font-size:0.75rem;color:var(--muted);font-weight:400;margin-left:4px;"></span></div>
+        <button class="btn btn-accent btn-sm" onclick="openAddContact()">+ Add</button>
+      </div>
+      <input class="form-input" id="contact-search" placeholder="🔍 Search name or number..." oninput="renderContacts()" style="margin-bottom:12px;" />
+      <div id="contact-list"></div>
+    </div>
+  </div>
+
+  <!-- ===== TEMPLATES ===== -->
+  <div class="wa-section" id="was-templates" style="display:none;">
+    <div class="panel">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="panel-title" style="margin-bottom:0;">⚡ Message Templates</div>
+        <button class="btn btn-accent btn-sm" onclick="openAddTemplate()">+ Add</button>
+      </div>
+      <div id="template-list"></div>
+    </div>
+  </div>
+
+  <!-- ===== SCHEDULED ===== -->
+  <div class="wa-section" id="was-scheduled" style="display:none;">
+    <div class="panel">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="panel-title" style="margin-bottom:0;">⏰ Scheduled Messages</div>
+        <span id="wa-sched-count" style="font-size:0.75rem;color:var(--muted);">0 pending</span>
+      </div>
+      <div id="wa-scheduled-list">
+        <div class="empty" style="padding:16px 0;"><div class="big" style="font-size:1.5rem;">📭</div>No scheduled messages</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ========== MEMORY DB TAB ========== -->
+<div class="tab" id="tab-memory">
+
+  <!-- Where is data saved explanation -->
+  <div class="panel" style="border-color:var(--accent);background:rgba(124,58,237,0.04);">
+    <div class="panel-title">🗄️ Where Is Your Data Saved?</div>
+    <div style="font-size:0.85rem;line-height:1.8;color:var(--text);">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="db-location-row">
+          <span class="db-loc-icon">💻</span>
+          <div><strong>Right now:</strong> All data saved in <code>localStorage</code> — inside this browser on this device only. If you clear browser data, it's gone.</div>
+        </div>
+        <div class="db-location-row">
+          <span class="db-loc-icon">☁️</span>
+          <div><strong>To sync across devices:</strong> Connect Google Sheets (we can set up together) — same way your Shreeji app works.</div>
+        </div>
+        <div class="db-location-row">
+          <span class="db-loc-icon">🔒</span>
+          <div><strong>Photos:</strong> Stored as base64 inside localStorage — stays on device, private, no cloud upload.</div>
+        </div>
+        <div class="db-location-row">
+          <span class="db-loc-icon">🤖</span>
+          <div><strong>AI brain:</strong> Claude (Anthropic) — called live via API each time. No conversation is stored permanently by this app.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Storage usage -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-num" id="db-todos-count" style="color:var(--accent)">0</div>
+      <div class="stat-label">Tasks</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="db-rem-count" style="color:#d97706">0</div>
+      <div class="stat-label">Reminders</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="db-notes-count" style="color:var(--accent2)">0</div>
+      <div class="stat-label">Notes</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="db-photos-count" style="color:#25d366">0</div>
+      <div class="stat-label">Photos</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="db-wa-count" style="color:#25d366">0</div>
+      <div class="stat-label">WA Msgs</div>
+    </div>
+  </div>
+
+  <!-- Storage size -->
+  <div class="panel" style="margin-bottom:16px;">
+    <div class="panel-title">📦 Storage Used</div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div id="db-size-bar-wrap" style="flex:1;min-width:200px;background:var(--border);border-radius:20px;height:10px;overflow:hidden;">
+        <div id="db-size-bar" style="height:100%;background:var(--accent);border-radius:20px;transition:width 0.5s;width:0%"></div>
+      </div>
+      <div id="db-size-label" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;white-space:nowrap;">Calculating...</div>
+    </div>
+    <div style="font-size:0.75rem;color:var(--muted);margin-top:8px;">localStorage limit ~5MB per domain. Photos use the most space.</div>
+  </div>
+
+  <!-- All DB keys raw view -->
+  <div class="panel" style="margin-bottom:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div class="panel-title" style="margin-bottom:0;">🔑 All Stored Keys</div>
+      <button class="btn-ghost btn-sm" onclick="renderMemoryDB()">↻ Refresh</button>
+    </div>
+    <div id="db-keys-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+  </div>
+
+  <!-- Export / Import / Backup -->
+  <div class="panel" style="margin-bottom:16px;">
+    <div class="panel-title">💾 Backup & Restore</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+      <button class="btn btn-accent" onclick="exportAllData()">⬇️ Export All (JSON)</button>
+      <button class="btn btn-blue" onclick="document.getElementById('db-import-file').click()">⬆️ Import Backup</button>
+      <input type="file" id="db-import-file" accept=".json" style="display:none;" />
+    </div>
+    <div style="font-size:0.75rem;color:var(--muted);line-height:1.6;">
+      Export saves everything (tasks, reminders, notes, photos, WA messages) as a JSON file to your device. Import restores from that file. Use this to back up before clearing browser data.
+    </div>
+  </div>
+
+  <!-- Danger zone -->
+  <div class="panel" style="border-color:rgba(220,38,38,0.3);background:rgba(220,38,38,0.03);">
+    <div class="panel-title" style="color:#dc2626;">⚠️ Danger Zone</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-red btn-sm" onclick="clearDBSection('todos')">Clear Tasks</button>
+      <button class="btn btn-red btn-sm" onclick="clearDBSection('reminders')">Clear Reminders</button>
+      <button class="btn btn-red btn-sm" onclick="clearDBSection('notes')">Clear Notes</button>
+      <button class="btn btn-red btn-sm" onclick="clearDBSection('photos')">Clear Photos</button>
+      <button class="btn btn-red btn-sm" onclick="clearDBSection('wa')">Clear WA</button>
+      <button class="btn btn-red" onclick="clearAllData()" style="background:#7f1d1d;">🗑️ Clear ALL Data</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ========== GOOGLE TAB ========== -->
+<div class="tab" id="tab-google">
+
+  <!-- Status bar -->
+  <div class="g-status-bar" id="g-status-bar">
+    <div class="g-status-item" id="gs-auth">
+      <span class="g-dot disconnected"></span>
+      <span>Not connected</span>
+    </div>
+    <div class="g-status-item" id="gs-contacts" style="display:none;">
+      <span class="g-dot connected"></span>
+      <span id="gs-contacts-label">Contacts</span>
+    </div>
+    <div class="g-status-item" id="gs-calendar" style="display:none;">
+      <span class="g-dot connected"></span>
+      <span>Calendar</span>
+    </div>
+    <div class="g-status-item" id="gs-gmail" style="display:none;">
+      <span class="g-dot connected"></span>
+      <span>Gmail</span>
+    </div>
+  </div>
+
+  <!-- STEP 1 — Client ID setup -->
+  <div class="panel" id="g-setup-panel">
+    <div class="panel-title" style="color:#4285f4;">🔧 Step 1 — One-Time Setup (5 min)</div>
+    <div style="font-size:0.82rem;line-height:1.9;color:var(--text);margin-bottom:14px;">
+      Google requires a free <strong>Client ID</strong> to allow this app to access your account. Do this once:
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+      <div class="g-step-row"><span class="g-step-num">1</span><div>Go to <a href="https://console.cloud.google.com" target="_blank" class="g-link">console.cloud.google.com</a> → Sign in with your Google account</div></div>
+      <div class="g-step-row"><span class="g-step-num">2</span><div>Click <strong>Select Project</strong> → <strong>New Project</strong> → Name it "Rickey AI" → Create</div></div>
+      <div class="g-step-row"><span class="g-step-num">3</span><div><strong>APIs & Services</strong> → <strong>Enable APIs</strong> → Enable: <em>Google People API</em>, <em>Google Calendar API</em>, <em>Gmail API</em></div></div>
+      <div class="g-step-row"><span class="g-step-num">4</span><div><strong>APIs & Services</strong> → <strong>OAuth consent screen</strong> → External → Fill app name "Rickey AI" → Add your email → Save</div></div>
+      <div class="g-step-row"><span class="g-step-num">5</span><div><strong>Credentials</strong> → <strong>+ Create Credentials</strong> → <strong>OAuth Client ID</strong> → Type: <strong>Web application</strong></div></div>
+      <div class="g-step-row"><span class="g-step-num">6</span><div>Under <strong>Authorised JavaScript origins</strong> add: <code id="g-origin-code" class="g-code">loading...</code> <button class="btn-ghost btn-sm" onclick="copyOrigin()">Copy</button></div></div>
+      <div class="g-step-row"><span class="g-step-num">7</span><div>Click <strong>Create</strong> → Copy your <strong>Client ID</strong> → Paste below</div></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Your Google Client ID</label>
+      <input class="form-input" id="g-client-id" placeholder="xxxxxxxxxxxx-xxxxxxxxxxxxxxxx.apps.googleusercontent.com" />
+    </div>
+    <button class="btn g-btn-connect" onclick="initGoogleAuth()">🔗 Connect Google Account</button>
+    <div style="font-size:0.75rem;color:var(--muted);margin-top:10px;">Your Client ID is saved locally on this device only. Nothing is sent to any server.</div>
+  </div>
+
+  <!-- Connected panel (shown after auth) -->
+  <div id="g-connected-panel" style="display:none;">
+
+    <div class="panel" style="border-color:#34a853;background:rgba(52,168,83,0.04);">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div class="panel-title" style="color:#34a853;margin-bottom:4px;">✅ Google Connected</div>
+          <div id="g-user-info" style="font-size:0.82rem;color:var(--muted);"></div>
+        </div>
+        <button class="btn-ghost btn-sm" onclick="gSignOut()" style="color:#dc2626;border-color:#dc2626;">Sign Out</button>
+      </div>
+    </div>
+
+    <!-- Google Contacts -->
+    <div class="panel" style="margin-bottom:12px;">
+      <div class="panel-title">👥 Google Contacts</div>
+      <div style="font-size:0.82rem;color:var(--muted);margin-bottom:12px;">Import your Google contacts directly into the WhatsApp contact book.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn g-btn-blue" onclick="importGoogleContacts()">📥 Import Contacts</button>
+      </div>
+      <div id="g-contacts-status" style="font-size:0.78rem;margin-top:8px;color:#34a853;display:none;"></div>
+    </div>
+
+    <!-- Google Calendar -->
+    <div class="panel" style="margin-bottom:12px;">
+      <div class="panel-title">📅 Google Calendar</div>
+      <div style="font-size:0.82rem;color:var(--muted);margin-bottom:12px;">Push your call reminders to Google Calendar so you get alerts on all devices.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn g-btn-blue" onclick="pushRemindersToCalendar()">📅 Push All Reminders</button>
+        <button class="btn-ghost" onclick="viewCalendarEvents()">👁 View Events</button>
+      </div>
+      <div id="g-cal-status" style="font-size:0.78rem;margin-top:8px;color:#34a853;display:none;"></div>
+      <div id="g-cal-list" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+
+    <!-- Gmail -->
+    <div class="panel">
+      <div class="panel-title">📧 Gmail</div>
+      <div style="font-size:0.82rem;color:var(--muted);margin-bottom:12px;">Send a professional email using AI — from your Gmail account.</div>
+      <input class="form-input" id="g-email-to" placeholder="To: email@example.com" style="margin-bottom:8px;" />
+      <input class="form-input" id="g-email-subject" placeholder="Subject" style="margin-bottom:8px;" />
+      <div class="ai-input-box" style="flex-direction:column;margin-bottom:10px;">
+        <textarea id="g-email-prompt" placeholder="What should the email say? AI will write it professionally..." style="min-height:60px;"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-accent" onclick="aiWriteEmail()">⚡ AI Write Email</button>
+      </div>
+      <div class="ai-thinking" id="g-email-thinking">
+        <div class="dots"><span></span><span></span><span></span></div> Writing email...
+      </div>
+      <div id="g-email-preview" style="display:none;margin-top:12px;">
+        <div class="panel-title" style="margin-bottom:6px;">Preview</div>
+        <div class="wa-bubble" id="g-email-body-preview" style="background:#f0f4ff;border-color:#c7d7ff;"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+          <button class="btn g-btn-send-email" onclick="sendGmail()">📧 Send via Gmail</button>
+          <button class="btn-ghost btn-sm" onclick="document.getElementById('g-email-preview').style.display='none'">✕</button>
+        </div>
+      </div>
+      <div id="g-email-status" style="font-size:0.78rem;margin-top:8px;color:#34a853;display:none;"></div>
+    </div>
+
+  </div>
+</div>
+
+</main>
+
+<!-- ===== ADD CONTACT MODAL ===== -->
+<div class="overlay" id="modal-contact">
+  <div class="modal">
+    <div class="modal-title" id="contact-modal-title">Add Contact</div>
+    <div class="form-group">
+      <label class="form-label">Name</label>
+      <input class="form-input" id="c-name" placeholder="e.g. Mehta Traders" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">WhatsApp Number (with country code)</label>
+      <input class="form-input" id="c-phone" placeholder="e.g. 919876543210" type="tel" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Type</label>
+      <select class="form-select" id="c-type">
+        <option value="client">🏢 Client</option>
+        <option value="supplier">📦 Supplier</option>
+        <option value="staff">👤 Staff</option>
+        <option value="other">📌 Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Note (optional)</label>
+      <input class="form-input" id="c-note" placeholder="e.g. Aluminium sheet buyer, pays on 25th" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('modal-contact')">Cancel</button>
+      <button class="btn btn-accent" onclick="saveContact()">Save Contact</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PICK CONTACT MODAL ===== -->
+<div class="overlay" id="modal-pick-contact">
+  <div class="modal">
+    <div class="modal-title">👥 Pick Contact</div>
+    <input class="form-input" id="pick-contact-search" placeholder="Search..." oninput="renderPickList()" style="margin-bottom:12px;" />
+    <div id="pick-contact-list" style="max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;"></div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('modal-pick-contact')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADD TEMPLATE MODAL ===== -->
+<div class="overlay" id="modal-template">
+  <div class="modal">
+    <div class="modal-title">⚡ Add Template</div>
+    <div class="form-group">
+      <label class="form-label">Template Name</label>
+      <input class="form-input" id="t-name" placeholder="e.g. Payment Reminder" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Category</label>
+      <select class="form-select" id="t-cat">
+        <option value="payment">💰 Payment</option>
+        <option value="sales">📦 Sales</option>
+        <option value="followup">🔄 Follow-up</option>
+        <option value="greeting">👋 Greeting</option>
+        <option value="other">📌 Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Message — use {name} for contact name, {amount} for amount</label>
+      <textarea class="form-textarea" id="t-body" placeholder="e.g. Hi {name}, just a reminder that payment of ₹{amount} is due today. Please let me know when you can arrange. Thanks 🙏" style="min-height:100px;"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('modal-template')">Cancel</button>
+      <button class="btn btn-accent" onclick="saveTemplate()">Save Template</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADD TODO MODAL ===== -->
+<div class="overlay" id="modal-todo">
+  <div class="modal">
+    <div class="modal-title">Add Task</div>
+    <div class="form-group">
+      <label class="form-label">Task Description</label>
+      <input class="form-input" id="m-todo-text" placeholder="Enter task..." />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Priority</label>
+      <select class="form-select" id="m-todo-priority">
+        <option value="high">🔴 High</option>
+        <option value="med" selected>🟡 Medium</option>
+        <option value="low">🟢 Low</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Category</label>
+      <input class="form-input" id="m-todo-cat" placeholder="e.g. Payment, Sales, Stock..." />
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('modal-todo')">Cancel</button>
+      <button class="btn btn-accent" onclick="addTodoManual()">Add Task</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADD REMINDER MODAL ===== -->
+<div class="overlay" id="modal-reminder">
+  <div class="modal">
+    <div class="modal-title">Add Reminder</div>
+    <div class="form-group">
+      <label class="form-label">Person / Company</label>
+      <input class="form-input" id="m-rem-name" placeholder="e.g. Mehta Traders" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Type</label>
+      <select class="form-select" id="m-rem-type">
+        <option value="payment">💰 Payment Collection</option>
+        <option value="sales">📦 Sales Follow-up</option>
+        <option value="call">📞 General Call</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Amount (₹) — optional</label>
+      <input class="form-input" id="m-rem-amount" type="number" placeholder="e.g. 45000" />
+    </div>
+    <div class="form-row" style="margin-bottom:14px;">
+      <div class="form-group">
+        <label class="form-label">📅 Call Date</label>
+        <input class="form-input" id="m-rem-date" type="date" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">⏰ Call Time</label>
+        <input class="form-input" id="m-rem-time" type="time" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Note</label>
+      <input class="form-input" id="m-rem-note" placeholder="Additional details..." />
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('modal-reminder')">Cancel</button>
+      <button class="btn btn-accent" onclick="addReminderManual()">Add Reminder</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADD NOTE MODAL ===== -->
+<div class="overlay" id="modal-note">
+  <div class="modal">
+    <div class="modal-title">Add Note</div>
+    <div class="form-group">
+      <label class="form-label">Title</label>
+      <input class="form-input" id="m-note-title" placeholder="Note title..." />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Content</label>
+      <textarea class="form-textarea" id="m-note-body" placeholder="Write your note..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tags (comma separated)</label>
+      <input class="form-input" id="m-note-tags" placeholder="e.g. payment, aluminium, client" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('modal-note')">Cancel</button>
+      <button class="btn btn-accent" onclick="addNoteManual()">Save Note</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== NOTE DETAIL OVERLAY ===== -->
+<div class="note-detail" id="note-detail">
+  <div class="note-detail-box">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
+      <div class="note-detail-title" id="nd-title"></div>
+      <button class="btn-ghost btn-sm" onclick="closeNoteDetail()">✕ Close</button>
+    </div>
+    <div class="note-card-footer" id="nd-tags" style="margin-bottom:12px;"></div>
+    <div class="divider"></div>
+    <div class="note-detail-body" id="nd-body"></div>
+    <div class="divider"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:0.75rem;color:var(--muted)" id="nd-date"></span>
+      <button class="btn btn-red btn-sm" onclick="deleteCurrentNote()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PHOTO TAG MODAL ===== -->
+<div class="overlay" id="modal-photo-tag">
+  <div class="modal">
+    <div class="modal-title">📷 Tag Your Photo</div>
+    <div id="photo-preview-wrap" style="margin-bottom:14px;border-radius:10px;overflow:hidden;max-height:200px;text-align:center;background:var(--surface);">
+      <img id="photo-preview-img" style="max-height:200px;max-width:100%;object-fit:contain;" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tags (comma separated)</label>
+      <input class="form-input" id="photo-tag-input" placeholder="e.g. invoice, client, aluminium, delivery" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('modal-photo-tag')">Cancel</button>
+      <button class="btn btn-accent" onclick="savePhoto()">Save Photo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== LIGHTBOX ===== -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightbox-img" src="" alt="" />
+</div>
+
+
+
+<script>
+// ============================================================
+// TAB SWITCHING — defined first so mobile nav onclick works
+// ============================================================
+function switchTab(tab, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  (el || event.currentTarget).classList.add('active');
+}
+
+function switchTabMobile(tab, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelectorAll('.mobile-nav-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  // Trigger tab-specific renders (safe — functions defined below)
+  if (tab === 'memory')    { setTimeout(renderMemoryDB, 0); }
+  if (tab === 'whatsapp')  { setTimeout(() => { renderContacts(); renderContactPicker(); }, 0); }
+  if (tab === 'google')    { setTimeout(initGoogleTab, 0); }
+  window.scrollTo(0, 0);
+}
+
+// ============================================================
+// DATA LAYER — localStorage persistence
+// ============================================================
+let todos = JSON.parse(localStorage.getItem('rickey_todos') || localStorage.getItem('shreeji_todos') || '[]');
+let reminders = JSON.parse(localStorage.getItem('rickey_reminders') || localStorage.getItem('shreeji_reminders') || '[]');
+let notes = JSON.parse(localStorage.getItem('rickey_notes') || localStorage.getItem('shreeji_notes') || '[]');
+let currentNoteId = null;
+
+// Google vars — declared here so initGoogleTab() can access them safely
+let gTokenClient = null;
+let gAccessToken = localStorage.getItem('g_access_token') || '';
+let gClientId    = localStorage.getItem('g_client_id') || '862446986268-6gmciu3vhhv50udesorlf6ke5n2pbeoq.apps.googleusercontent.com';
+let gEmailBody   = '';
+
+function save() {
+  localStorage.setItem('rickey_todos', JSON.stringify(todos));
+  localStorage.setItem('rickey_reminders', JSON.stringify(reminders));
+  localStorage.setItem('rickey_notes', JSON.stringify(notes));
+}
+
+// ============================================================
+// CLAUDE API CALL
+// ============================================================
+async function callClaude(systemPrompt, userMsg) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1000,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userMsg }]
+    })
+  });
+  const data = await res.json();
+  return data.content?.map(b => b.text || "").join("") || "";
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function openAddTodo() { document.getElementById('modal-todo').classList.add('show'); }
+function openAddReminder() {
+  document.getElementById('m-rem-name').value = '';
+  document.getElementById('m-rem-amount').value = '';
+  document.getElementById('m-rem-note').value = '';
+  document.getElementById('m-rem-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('m-rem-time').value = '';
+  document.getElementById('modal-reminder').classList.add('show');
+}
+function openAddNote() { document.getElementById('modal-note').classList.add('show'); }
+
+// ============================================================
+// TO-DO
+// ============================================================
+async function aiGenerateTodo() {
+  const prompt = document.getElementById('todo-prompt').value.trim();
+  if (!prompt) { showToast('Type something first!'); return; }
+  document.getElementById('todo-thinking').classList.add('show');
+
+  try {
+    const sys = `You are a task management AI for Shreeji Industries (aluminium/heatsink manufacturing business).
+Extract actionable tasks from user input and return ONLY valid JSON array, no markdown, no preamble.
+Each task object: { "text": string, "priority": "high"|"med"|"low", "category": string }
+Priority rules: payment/due/urgent = high, follow-up/call = med, general = low.
+Category examples: Payment, Sales, Stock, Delivery, Production, Admin.`;
+
+    const raw = await callClaude(sys, prompt);
+    const clean = raw.replace(/```json|```/gi, '').trim();
+    const tasks = JSON.parse(clean);
+
+    tasks.forEach(t => {
+      todos.unshift({ id: uid(), text: t.text, priority: t.priority || 'med', category: t.category || 'General', done: false, created: new Date().toISOString() });
+    });
+    save(); renderTodos();
+    document.getElementById('todo-prompt').value = '';
+    showToast(`✅ Added ${tasks.length} task(s)`);
+  } catch(e) {
+    showToast('AI error — check API key or try again');
+    console.error(e);
+  }
+  document.getElementById('todo-thinking').classList.remove('show');
+}
+
+function addTodoManual() {
+  const text = document.getElementById('m-todo-text').value.trim();
+  if (!text) { showToast('Enter task text'); return; }
+  todos.unshift({
+    id: uid(),
+    text,
+    priority: document.getElementById('m-todo-priority').value,
+    category: document.getElementById('m-todo-cat').value || 'General',
+    done: false, created: new Date().toISOString()
+  });
+  save(); renderTodos(); closeModal('modal-todo');
+  document.getElementById('m-todo-text').value = '';
+  document.getElementById('m-todo-cat').value = '';
+  showToast('Task added!');
+}
+
+function toggleTodo(id) {
+  const t = todos.find(x => x.id === id);
+  if (t) { t.done = !t.done; save(); renderTodos(); }
+}
+
+function deleteTodo(id) {
+  todos = todos.filter(x => x.id !== id);
+  save(); renderTodos();
+}
+
+function clearDone() {
+  todos = todos.filter(t => !t.done);
+  save(); renderTodos(); showToast('Cleared completed tasks');
+}
+
+function renderTodos() {
+  const list = document.getElementById('todo-list');
+  const pending = todos.filter(t => !t.done);
+  const done = todos.filter(t => t.done);
+  const ordered = [...pending, ...done];
+
+  document.getElementById('s-total').textContent = todos.length;
+  document.getElementById('s-done').textContent = done.length;
+  document.getElementById('s-high').textContent = todos.filter(t => !t.done && t.priority === 'high').length;
+  document.getElementById('todo-badge').textContent = pending.length;
+
+  if (!todos.length) {
+    list.innerHTML = '<div class="empty"><div class="big">✅</div>No tasks yet. Tell AI to generate!</div>';
+    return;
+  }
+
+  list.innerHTML = ordered.map(t => `
+    <div class="todo-item ${t.done ? 'done' : ''}">
+      <div class="todo-check ${t.done ? 'checked' : ''}" onclick="toggleTodo('${t.id}')"></div>
+      <div class="todo-body">
+        <div class="todo-text">${t.text}</div>
+        <div class="todo-meta">
+          <span class="tag tag-priority-${t.priority}">${t.priority.toUpperCase()}</span>
+          <span class="tag tag-cat">${t.category}</span>
+        </div>
+      </div>
+      <div class="todo-actions">
+        <button class="icon-btn" onclick="deleteTodo('${t.id}')" title="Delete">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// REMINDERS
+// ============================================================
+async function aiGenerateReminder() {
+  const prompt = document.getElementById('rem-prompt').value.trim();
+  if (!prompt) { showToast('Type something first!'); return; }
+  document.getElementById('rem-thinking').classList.add('show');
+
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const sys = `You are a business reminder AI for Rickey.
+Extract payment/sales/call reminders. Return ONLY valid JSON array, no markdown.
+Each object: { "name": string, "type": "payment"|"sales"|"call", "amount": number|null, "dueDate": "YYYY-MM-DD"|null, "callTime": "HH:MM"|null, "note": string }
+Today is ${today}. Infer dates from context (e.g. "20th May" = current or next May 20). Extract time if mentioned (e.g. "at 11am" = "11:00", "3:30 pm" = "15:30").
+Amount only for payment type. If no amount, set null.`;
+
+    const raw = await callClaude(sys, prompt);
+    const clean = raw.replace(/```json|```/gi, '').trim();
+    const items = JSON.parse(clean);
+
+    items.forEach(r => {
+      reminders.unshift({ id: uid(), name: r.name, type: r.type || 'call', amount: r.amount || null, dueDate: r.dueDate || null, callTime: r.callTime || null, note: r.note || '', done: false, created: new Date().toISOString() });
+    });
+    save(); renderReminders();
+    document.getElementById('rem-prompt').value = '';
+    showToast(`📞 Added ${items.length} reminder(s)`);
+  } catch(e) {
+    showToast('AI error — try again');
+    console.error(e);
+  }
+  document.getElementById('rem-thinking').classList.remove('show');
+}
+
+function addReminderManual() {
+  const name = document.getElementById('m-rem-name').value.trim();
+  if (!name) { showToast('Enter name'); return; }
+  reminders.unshift({
+    id: uid(),
+    name,
+    type: document.getElementById('m-rem-type').value,
+    amount: document.getElementById('m-rem-amount').value || null,
+    dueDate: document.getElementById('m-rem-date').value || null,
+    callTime: document.getElementById('m-rem-time').value || null,
+    note: document.getElementById('m-rem-note').value,
+    done: false, created: new Date().toISOString()
+  });
+  save(); renderReminders(); closeModal('modal-reminder');
+  showToast('Reminder added!');
+}
+
+function deleteReminder(id) {
+  reminders = reminders.filter(r => r.id !== id);
+  save(); renderReminders();
+}
+
+function doneReminder(id) {
+  reminders = reminders.filter(r => r.id !== id);
+  save(); renderReminders(); showToast('Marked done ✓');
+}
+
+function getDueClass(dueDate) {
+  if (!dueDate) return { cls: 'due-ok', label: 'No date' };
+  const today = new Date(); today.setHours(0,0,0,0);
+  const due = new Date(dueDate); due.setHours(0,0,0,0);
+  const diff = Math.round((due - today) / 86400000);
+  if (diff < 0) return { cls: 'due-overdue', label: `${Math.abs(diff)}d overdue` };
+  if (diff === 0) return { cls: 'due-today', label: 'TODAY' };
+  if (diff <= 3) return { cls: 'due-soon', label: `In ${diff}d` };
+  return { cls: 'due-ok', label: due.toLocaleDateString('en-IN', {day:'numeric',month:'short'}) };
+}
+
+function typeIcon(type) {
+  return type === 'payment' ? '💰' : type === 'sales' ? '📦' : '📞';
+}
+
+function renderReminders() {
+  const list = document.getElementById('reminder-list');
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  let overdue = 0, todayCount = 0;
+  reminders.forEach(r => {
+    if (!r.dueDate) return;
+    const due = new Date(r.dueDate); due.setHours(0,0,0,0);
+    const diff = Math.round((due - today) / 86400000);
+    if (diff < 0) overdue++;
+    if (diff === 0) todayCount++;
+  });
+
+  document.getElementById('r-overdue').textContent = overdue;
+  document.getElementById('r-today').textContent = todayCount;
+  document.getElementById('r-total').textContent = reminders.length;
+  document.getElementById('rem-badge').textContent = overdue + todayCount;
+
+  if (!reminders.length) {
+    list.innerHTML = '<div class="empty"><div class="big">📞</div>No reminders yet</div>';
+    return;
+  }
+
+  const sorted = [...reminders].sort((a,b) => {
+    if (!a.dueDate) return 1; if (!b.dueDate) return -1;
+    return new Date(a.dueDate) - new Date(b.dueDate);
+  });
+
+  list.innerHTML = sorted.map(r => {
+    const due = getDueClass(r.dueDate);
+    const itemCls = due.cls === 'due-overdue' ? 'overdue' : due.cls === 'due-today' ? 'today' : '';
+    const callTimeStr = r.callTime ? formatTime12(r.callTime) : '';
+    const callDateStr = r.dueDate ? new Date(r.dueDate).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '';
+    return `
+    <div class="reminder-item ${itemCls}">
+      <div class="reminder-icon ${r.type}">${typeIcon(r.type)}</div>
+      <div class="reminder-body">
+        <div class="reminder-title">${r.name}${r.amount ? ` &nbsp;<span class="reminder-amount">₹${Number(r.amount).toLocaleString('en-IN')}</span>` : ''}</div>
+        <div class="reminder-sub">${r.note || (r.type === 'payment' ? 'Payment collection' : r.type === 'sales' ? 'Sales follow-up' : 'Call reminder')}</div>
+        ${(callDateStr || callTimeStr) ? `<div class="call-time-badge">📅 ${callDateStr}${callTimeStr ? ' &nbsp;⏰ ' + callTimeStr : ''}</div>` : ''}
+      </div>
+      <span class="due-badge ${due.cls}">${due.label}</span>
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <button class="btn-ghost btn-sm" onclick="doneReminder('${r.id}')">✓</button>
+        <button class="btn-ghost btn-sm" onclick="deleteReminder('${r.id}')" style="border-color:rgba(255,107,107,0.3);color:var(--accent3)">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// NOTES
+// ============================================================
+async function aiSaveNote() {
+  const content = document.getElementById('note-prompt').value.trim();
+  if (!content) { showToast('Type a note first!'); return; }
+  document.getElementById('note-thinking').classList.add('show');
+
+  try {
+    const sys = `You are a smart note organizer for Shreeji Industries (aluminium manufacturing).
+Analyze the note and return ONLY valid JSON (no markdown):
+{ "title": string (short, descriptive), "summary": string (1-2 lines), "tags": string[] (3-6 relevant tags, lowercase), "body": string (formatted, keep full info) }`;
+
+    const raw = await callClaude(sys, content);
+    const clean = raw.replace(/```json|```/gi, '').trim();
+    const note = JSON.parse(clean);
+
+    notes.unshift({
+      id: uid(),
+      title: note.title,
+      summary: note.summary,
+      tags: note.tags || [],
+      body: note.body || content,
+      created: new Date().toISOString()
+    });
+    save(); renderNotes();
+    document.getElementById('note-prompt').value = '';
+    showToast('📒 Note saved!');
+  } catch(e) {
+    showToast('AI error — try again');
+    console.error(e);
+  }
+  document.getElementById('note-thinking').classList.remove('show');
+}
+
+function addNoteManual() {
+  const title = document.getElementById('m-note-title').value.trim();
+  const body = document.getElementById('m-note-body').value.trim();
+  if (!title || !body) { showToast('Enter title and content'); return; }
+  const tagStr = document.getElementById('m-note-tags').value;
+  const tags = tagStr.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+
+  notes.unshift({ id: uid(), title, summary: body.slice(0, 100), tags, body, created: new Date().toISOString() });
+  save(); renderNotes(); closeModal('modal-note');
+  document.getElementById('m-note-title').value = '';
+  document.getElementById('m-note-body').value = '';
+  document.getElementById('m-note-tags').value = '';
+  showToast('Note saved!');
+}
+
+function openNote(id) {
+  const n = notes.find(x => x.id === id);
+  if (!n) return;
+  currentNoteId = id;
+  document.getElementById('nd-title').textContent = n.title;
+  document.getElementById('nd-body').textContent = n.body;
+  document.getElementById('nd-date').textContent = new Date(n.created).toLocaleString('en-IN');
+  document.getElementById('nd-tags').innerHTML = n.tags.map(t => `<span class="tag tag-cat">#${t}</span>`).join(' ');
+  document.getElementById('note-detail').classList.add('show');
+}
+
+function closeNoteDetail() {
+  document.getElementById('note-detail').classList.remove('show');
+  currentNoteId = null;
+}
+
+function deleteCurrentNote() {
+  if (!currentNoteId) return;
+  notes = notes.filter(n => n.id !== currentNoteId);
+  save(); renderNotes(); closeNoteDetail(); showToast('Note deleted');
+}
+
+function searchNotes() {
+  const q = document.getElementById('note-search').value.toLowerCase();
+  renderNotes(q);
+}
+
+function renderNotes(filter = '') {
+  const grid = document.getElementById('notes-grid');
+  let list = filter
+    ? notes.filter(n => n.title.toLowerCase().includes(filter) || n.body.toLowerCase().includes(filter) || n.tags.some(t => t.includes(filter)))
+    : notes;
+
+  if (!list.length) {
+    grid.innerHTML = `<div class="empty"><div class="big">📒</div>${filter ? 'No notes match your search' : 'No notes yet'}</div>`;
+    return;
+  }
+
+  grid.innerHTML = list.map(n => `
+    <div class="note-card" onclick="openNote('${n.id}')">
+      <div class="note-card-title">${n.title}</div>
+      <div class="note-card-body">${n.summary || n.body.slice(0, 120)}${n.body.length > 120 ? '...' : ''}</div>
+      <div class="note-card-footer">
+        ${n.tags.map(t => `<span class="tag tag-cat">#${t}</span>`).join('')}
+        <span class="note-card-date">${new Date(n.created).toLocaleDateString('en-IN', {day:'numeric',month:'short'})}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// TIME FORMATTER
+// ============================================================
+function formatTime12(t) {
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+
+// ============================================================
+// PHOTO SYSTEM
+// ============================================================
+let photos = JSON.parse(localStorage.getItem('rickey_photos') || '[]');
+let pendingPhotoFiles = [];
+let pendingPhotoIndex = 0;
+let activePhotoTag = 'all';
+let pendingImgData = '';
+
+function savePhotos() { localStorage.setItem('rickey_photos', JSON.stringify(photos)); }
+
+function processNextPhoto() {
+  if (pendingPhotoIndex >= pendingPhotoFiles.length) {
+    pendingPhotoFiles = [];
+    pendingPhotoIndex = 0;
+    return;
+  }
+  const file = pendingPhotoFiles[pendingPhotoIndex];
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    pendingImgData = ev.target.result;
+    document.getElementById('photo-preview-img').src = pendingImgData;
+    document.getElementById('photo-tag-input').value = '';
+    document.getElementById('modal-photo-tag').classList.add('show');
+  };
+  reader.onerror = function() {
+    showToast('Could not read image, try again');
+    pendingPhotoIndex++;
+    processNextPhoto();
+  };
+  reader.readAsDataURL(file);
+}
+
+function savePhoto() {
+  if (!pendingImgData) { showToast('No image data — try again'); return; }
+  const tags = document.getElementById('photo-tag-input').value
+    .split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+  photos.unshift({ id: uid(), src: pendingImgData, tags, created: new Date().toISOString() });
+  savePhotos();
+  pendingImgData = '';
+  document.getElementById('modal-photo-tag').classList.remove('show');
+  pendingPhotoIndex++;
+  renderPhotos();
+  showToast('📷 Photo saved!');
+  // Process next if multiple selected
+  if (pendingPhotoIndex < pendingPhotoFiles.length) {
+    setTimeout(processNextPhoto, 400);
+  } else {
+    pendingPhotoFiles = [];
+    pendingPhotoIndex = 0;
+  }
+}
+
+function deletePhoto(id) {
+  photos = photos.filter(p => p.id !== id);
+  savePhotos(); renderPhotos();
+}
+
+function filterPhotos(tag, el) {
+  activePhotoTag = tag;
+  document.querySelectorAll('.photo-tag-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderPhotos();
+}
+
+function openLightbox(id) {
+  const p = photos.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('lightbox-img').src = p.src;
+  document.getElementById('lightbox').classList.add('show');
+}
+function closeLightbox() { document.getElementById('lightbox').classList.remove('show'); }
+
+function renderPhotos() {
+  const grid = document.getElementById('photo-grid');
+  const bar = document.getElementById('photo-tag-bar');
+
+  const allTags = [...new Set(photos.flatMap(p => p.tags))].sort();
+  bar.innerHTML = `<span class="photo-tag-chip ${activePhotoTag==='all'?'active':''}" onclick="filterPhotos('all',this)">All</span>`;
+  allTags.forEach(tag => {
+    bar.innerHTML += `<span class="photo-tag-chip ${activePhotoTag===tag?'active':''}" onclick="filterPhotos('${tag}',this)">#${tag}</span>`;
+  });
+
+  const filtered = activePhotoTag === 'all' ? photos : photos.filter(p => p.tags.includes(activePhotoTag));
+  if (!filtered.length) {
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1;padding:20px 0;"><div class="big">📷</div>${activePhotoTag==='all'?'Tap + Add Photo to start':'No photos with tag #'+activePhotoTag}</div>`;
+    return;
+  }
+  grid.innerHTML = filtered.map(p => `
+    <div class="photo-item" onclick="openLightbox('${p.id}')">
+      <img src="${p.src}" alt="photo" />
+      <div class="photo-item-tags">${p.tags.map(t=>`<span class="photo-item-tag">#${t}</span>`).join('')}</div>
+      <button class="photo-del" onclick="event.stopPropagation();deletePhoto('${p.id}')">✕</button>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// WA SUB-TAB NAVIGATION
+// ============================================================
+function waSubTab(name, el) {
+  document.querySelectorAll('.wa-section').forEach(s => s.style.display = 'none');
+  document.querySelectorAll('.wa-subtab').forEach(b => b.classList.remove('active'));
+  document.getElementById('was-' + name).style.display = 'block';
+  el.classList.add('active');
+  if (name === 'contacts') renderContacts();
+  if (name === 'templates') renderTemplates();
+  if (name === 'scheduled') renderWAScheduled();
+}
+
+// ============================================================
+// VCF IMPORT
+// ============================================================
+function parseVCF(text) {
+  const results = [];
+  // Split into individual vCards
+  const cards = text.split(/END:VCARD/i).filter(s => s.trim());
+  cards.forEach(card => {
+    // Name
+    let name = '';
+    const fnMatch = card.match(/^FN[;:](.+)$/m);
+    if (fnMatch) name = fnMatch[1].replace(/;/g,' ').replace(/\\n/g,'').trim();
+    if (!name) {
+      const nMatch = card.match(/^N[;:](.+)$/m);
+      if (nMatch) {
+        const parts = nMatch[1].split(';');
+        name = [parts[1], parts[0]].filter(Boolean).join(' ').trim();
+      }
+    }
+    if (!name) return;
+
+    // Phone — grab all TEL lines, prefer mobile/cell
+    const telLines = [...card.matchAll(/^TEL[^:]*:(.+)$/mg)].map(m => m[1].trim());
+    if (!telLines.length) return;
+
+    // Clean number — keep digits only, add 91 if Indian 10-digit
+    const cleanPhone = (raw) => {
+      let digits = raw.replace(/\D/g,'');
+      if (digits.startsWith('0')) digits = '91' + digits.slice(1);
+      if (digits.length === 10) digits = '91' + digits;
+      return digits;
+    };
+
+    // Add one entry per unique phone
+    const seen = new Set();
+    telLines.forEach(tel => {
+      const phone = cleanPhone(tel);
+      if (phone.length < 10 || seen.has(phone)) return;
+      seen.add(phone);
+      results.push({ id: uid(), name, phone, type: 'other', note: '', imported: true });
+    });
+  });
+  return results;
+}
+
+function importVCF(file) {
+  const status = document.getElementById('vcf-import-status');
+  status.style.display = 'block';
+  status.textContent = '⏳ Reading file...';
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const parsed = parseVCF(e.target.result);
+      if (!parsed.length) { status.textContent = '❌ No contacts found in file'; return; }
+      // Merge — skip duplicates by phone
+      const existingPhones = new Set(contacts.map(c => c.phone));
+      const fresh = parsed.filter(c => !existingPhones.has(c.phone));
+      contacts = [...contacts, ...fresh];
+      saveContacts();
+      renderContacts();
+      renderContactPicker();
+      status.textContent = `✅ Imported ${fresh.length} new contacts (${parsed.length - fresh.length} duplicates skipped)`;
+      showToast(`👥 ${fresh.length} contacts imported!`);
+    } catch(err) {
+      status.textContent = '❌ Could not read file — try exporting again';
+      console.error(err);
+    }
+  };
+  reader.onerror = () => { status.textContent = '❌ File read error'; };
+  reader.readAsText(file, 'UTF-8');
+}
+
+// ============================================================
+// CONTACT BOOK
+// ============================================================
+let contacts = JSON.parse(localStorage.getItem('rickey_contacts') || '[]');
+function saveContacts() { localStorage.setItem('rickey_contacts', JSON.stringify(contacts)); }
+
+const typeColors = { client:'client', supplier:'supplier', staff:'staff', other:'other' };
+const typeIcons  = { client:'🏢', supplier:'📦', staff:'👤', other:'📌' };
+
+function openAddContact() {
+  document.getElementById('contact-modal-title').textContent = 'Add Contact';
+  document.getElementById('c-name').value = '';
+  document.getElementById('c-phone').value = '';
+  document.getElementById('c-type').value = 'client';
+  document.getElementById('c-note').value = '';
+  document.getElementById('modal-contact').dataset.editId = '';
+  document.getElementById('modal-contact').classList.add('show');
+}
+
+function editContact(id) {
+  const c = contacts.find(x => x.id === id); if (!c) return;
+  document.getElementById('contact-modal-title').textContent = 'Edit Contact';
+  document.getElementById('c-name').value = c.name;
+  document.getElementById('c-phone').value = c.phone;
+  document.getElementById('c-type').value = c.type;
+  document.getElementById('c-note').value = c.note || '';
+  document.getElementById('modal-contact').dataset.editId = id;
+  document.getElementById('modal-contact').classList.add('show');
+}
+
+function saveContact() {
+  const name  = document.getElementById('c-name').value.trim();
+  const phone = document.getElementById('c-phone').value.replace(/\D/g,'');
+  if (!name || !phone) { showToast('Name and number required'); return; }
+  const editId = document.getElementById('modal-contact').dataset.editId;
+  if (editId) {
+    const c = contacts.find(x => x.id === editId);
+    if (c) { c.name = name; c.phone = phone; c.type = document.getElementById('c-type').value; c.note = document.getElementById('c-note').value; }
+  } else {
+    contacts.unshift({ id: uid(), name, phone, type: document.getElementById('c-type').value, note: document.getElementById('c-note').value });
+  }
+  saveContacts(); closeModal('modal-contact'); renderContacts(); renderContactPicker();
+  showToast('Contact saved!');
+}
+
+function deleteContact(id) {
+  if (!confirm('Delete this contact?')) return;
+  contacts = contacts.filter(c => c.id !== id);
+  saveContacts(); renderContacts(); renderContactPicker();
+}
+
+function useContact(id) {
+  const c = contacts.find(x => x.id === id); if (!c) return;
+  document.getElementById('wa-contact-name').value = c.name;
+  document.getElementById('wa-phone').value = c.phone;
+  waSubTab('compose', document.querySelector('.wa-subtab'));
+  showToast('📱 ' + c.name + ' selected');
+}
+
+function sendToContact(id) {
+  const c = contacts.find(x => x.id === id); if (!c) return;
+  if (!waCurrentMsg) { showToast('Compose a message first in Compose tab'); return; }
+  window.open(buildWAUrl(c.phone, waCurrentMsg), '_blank');
+}
+
+function renderContacts() {
+  const list = document.getElementById('contact-list');
+  const badge = document.getElementById('contact-total-badge');
+  const q = (document.getElementById('contact-search')?.value || '').toLowerCase();
+  const filtered = q ? contacts.filter(c => c.name.toLowerCase().includes(q) || c.phone.includes(q)) : contacts;
+  if (badge) badge.textContent = contacts.length ? `(${contacts.length})` : '';
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty" style="padding:20px 0;"><div class="big">👥</div>' + (q ? 'No contacts found' : 'Import .vcf or add manually') + '</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(c => `
+    <div class="contact-card">
+      <div class="contact-avatar ${typeColors[c.type]||''}">${c.name.charAt(0).toUpperCase()}</div>
+      <div class="contact-body">
+        <div class="contact-name">${typeIcons[c.type]||''} ${c.name}</div>
+        <div class="contact-phone">📱 +${c.phone}</div>
+        ${c.note ? `<div class="contact-note">${c.note}</div>` : ''}
+      </div>
+      <div class="contact-actions">
+        <button class="btn wa-btn-send btn-sm" style="min-width:auto;padding:6px 10px;" onclick="quickSendContact('${c.id}')">💬</button>
+        <button class="btn-ghost btn-sm" onclick="editContact('${c.id}')">✏️</button>
+        <button class="btn-ghost btn-sm" style="color:var(--accent3);" onclick="deleteContact('${c.id}')">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function quickSendContact(id) {
+  const c = contacts.find(x => x.id === id); if (!c) return;
+  document.getElementById('wa-contact-name').value = c.name;
+  document.getElementById('wa-phone').value = c.phone;
+  // Switch to compose
+  waSubTab('compose', document.querySelectorAll('.wa-subtab')[0]);
+  showToast('👥 ' + c.name + ' loaded — compose & send!');
+}
+
+function renderContactPicker() {
+  const chips = document.getElementById('wa-contact-chips');
+  if (!chips) return;
+  const picker = document.getElementById('wa-contact-picker');
+  if (!contacts.length) { picker.style.display = 'none'; return; }
+  picker.style.display = 'block';
+  chips.innerHTML = contacts.slice(0,8).map(c => `
+    <span class="wa-contact-chip" onclick="selectContactChip('${c.id}')">
+      ${c.name.charAt(0)} ${c.name.split(' ')[0]}
+    </span>
+  `).join('');
+}
+
+function filterContactPicker(q) { renderContactPicker(); }
+
+function selectContactChip(id) {
+  const c = contacts.find(x => x.id === id); if (!c) return;
+  document.getElementById('wa-contact-name').value = c.name;
+  document.getElementById('wa-phone').value = c.phone;
+  showToast('👥 ' + c.name);
+}
+
+function openPickContact() {
+  renderPickList();
+  document.getElementById('modal-pick-contact').classList.add('show');
+}
+
+function renderPickList() {
+  const q = document.getElementById('pick-contact-search')?.value.toLowerCase() || '';
+  const filtered = q ? contacts.filter(c => c.name.toLowerCase().includes(q)) : contacts;
+  const list = document.getElementById('pick-contact-list');
+  if (!filtered.length) { list.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:0.85rem;padding:16px;">No contacts</div>'; return; }
+  list.innerHTML = filtered.map(c => `
+    <div class="contact-card" style="margin-bottom:0;cursor:pointer;" onclick="pickContact('${c.id}')">
+      <div class="contact-avatar ${typeColors[c.type]||''}">${c.name.charAt(0).toUpperCase()}</div>
+      <div class="contact-body">
+        <div class="contact-name">${c.name}</div>
+        <div class="contact-phone">+${c.phone}</div>
+      </div>
+      <span style="font-size:0.75rem;color:#25d366;font-family:'Syne',sans-serif;font-weight:700;">SELECT</span>
+    </div>
+  `).join('');
+}
+
+function pickContact(id) {
+  const c = contacts.find(x => x.id === id); if (!c) return;
+  document.getElementById('wa-contact-name').value = c.name;
+  document.getElementById('wa-phone').value = c.phone;
+  closeModal('modal-pick-contact');
+  showToast('👥 ' + c.name + ' selected');
+}
+
+// ============================================================
+// MESSAGE TEMPLATES
+// ============================================================
+let templates = JSON.parse(localStorage.getItem('rickey_templates') || '[]');
+function saveTemplates() { localStorage.setItem('rickey_templates', JSON.stringify(templates)); }
+
+const defaultTemplates = [
+  { id:'t1', name:'Payment Reminder', cat:'payment', body:'Hi {name}, this is a gentle reminder that a payment of ₹{amount} is due. Could you please let us know when we can expect it? Thank you 🙏' },
+  { id:'t2', name:'Payment Follow-up', cat:'payment', body:'Hi {name}, just following up on the pending payment of ₹{amount}. Please let me know if there is any issue. We would appreciate early settlement. Thanks.' },
+  { id:'t3', name:'Order Confirmation', cat:'sales', body:'Hi {name}, your order has been confirmed and is being processed. We will update you with delivery details shortly. Thank you for your business! 😊' },
+  { id:'t4', name:'Delivery Update', cat:'sales', body:'Hi {name}, good news! Your order is ready and will be delivered soon. Please keep your number active for our delivery team. Thank you.' },
+  { id:'t5', name:'Sales Follow-up', cat:'followup', body:'Hi {name}, hope you are doing well! Wanted to follow up on our last discussion. Please let me know if you have any requirements we can help with. 🙏' },
+  { id:'t6', name:'Festival Greeting', cat:'greeting', body:'Hi {name}, wishing you and your family a very Happy Festival! Thank you for your continued trust and support. 🎉🙏' },
+];
+
+function initTemplates() {
+  if (!templates.length) { templates = defaultTemplates; saveTemplates(); }
+}
+
+function openAddTemplate() {
+  document.getElementById('t-name').value = '';
+  document.getElementById('t-body').value = '';
+  document.getElementById('t-cat').value = 'payment';
+  document.getElementById('modal-template').dataset.editId = '';
+  document.getElementById('modal-template').classList.add('show');
+}
+
+function saveTemplate() {
+  const name = document.getElementById('t-name').value.trim();
+  const body = document.getElementById('t-body').value.trim();
+  if (!name || !body) { showToast('Name and message required'); return; }
+  const editId = document.getElementById('modal-template').dataset.editId;
+  if (editId) {
+    const t = templates.find(x => x.id === editId);
+    if (t) { t.name = name; t.body = body; t.cat = document.getElementById('t-cat').value; }
+  } else {
+    templates.unshift({ id: uid(), name, cat: document.getElementById('t-cat').value, body });
+  }
+  saveTemplates(); closeModal('modal-template'); renderTemplates();
+  showToast('Template saved!');
+}
+
+function useTemplate(id) {
+  const t = templates.find(x => x.id === id); if (!t) return;
+  const name = document.getElementById('wa-contact-name').value || '{name}';
+  const msg = t.body.replace(/{name}/g, name).replace(/{amount}/g, '');
+  waCurrentMsg = msg;
+  document.getElementById('wa-preview-text').textContent = msg;
+  document.getElementById('wa-compose-area').style.display = 'block';
+  waSubTab('compose', document.querySelectorAll('.wa-subtab')[0]);
+  showToast('⚡ Template loaded!');
+}
+
+function deleteTemplate(id) {
+  if (!confirm('Delete template?')) return;
+  templates = templates.filter(t => t.id !== id);
+  saveTemplates(); renderTemplates();
+}
+
+const catColors = { payment:'rgba(220,38,38,0.1)', sales:'rgba(109,40,217,0.1)', followup:'rgba(217,119,6,0.1)', greeting:'rgba(37,211,102,0.1)', other:'rgba(124,58,237,0.08)' };
+const catTextColors = { payment:'#dc2626', sales:'var(--accent2)', followup:'#d97706', greeting:'#25d366', other:'var(--accent)' };
+
+function renderTemplates() {
+  const list = document.getElementById('template-list');
+  if (!templates.length) { list.innerHTML = '<div class="empty" style="padding:20px 0;"><div class="big">⚡</div>No templates yet</div>'; return; }
+  list.innerHTML = templates.map(t => `
+    <div class="template-card">
+      <div class="template-header">
+        <div class="template-name">${t.name}</div>
+        <span class="tag" style="background:${catColors[t.cat]||''};color:${catTextColors[t.cat]||''};border:1px solid currentColor;">${t.cat}</span>
+      </div>
+      <div class="template-body">${t.body}</div>
+      <div class="template-actions">
+        <button class="btn wa-btn-send btn-sm" style="min-width:auto;" onclick="useTemplate('${t.id}')">💬 Use</button>
+        <button class="btn-ghost btn-sm" onclick="deleteTemplate('${t.id}')" style="color:var(--accent3);">✕ Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// WHATSAPP SYSTEM
+// ============================================================
+let waScheduled = JSON.parse(localStorage.getItem('rickey_wa_scheduled') || '[]');
+let waCurrentMsg = '';
+let waScheduleTimers = {};
+
+function saveWAScheduled() { localStorage.setItem('rickey_wa_scheduled', JSON.stringify(waScheduled)); }
+
+// AI compose message
+async function aiComposeWA() {
+  const prompt = document.getElementById('wa-ai-prompt').value.trim();
+  const name = document.getElementById('wa-contact-name').value.trim();
+  if (!prompt) { showToast('Describe what to say first'); return; }
+  document.getElementById('wa-thinking').classList.add('show');
+  document.getElementById('wa-compose-area').style.display = 'none';
+
+  try {
+    const sys = `You are a WhatsApp message writer for a business owner named Rickey.
+Write a professional yet friendly WhatsApp message in a natural, conversational tone.
+Keep it concise (2-4 sentences usually). Use Indian business context.
+${name ? `The message is to: ${name}.` : ''}
+Return ONLY the message text — no quotes, no explanation, no subject line.`;
+
+    const raw = await callClaude(sys, prompt);
+    waCurrentMsg = raw.trim();
+    document.getElementById('wa-preview-text').textContent = waCurrentMsg;
+    document.getElementById('wa-compose-area').style.display = 'block';
+    document.getElementById('wa-edit-area').style.display = 'none';
+    document.getElementById('wa-schedule-area').style.display = 'none';
+  } catch(e) {
+    showToast('AI error — try again');
+  }
+  document.getElementById('wa-thinking').classList.remove('show');
+}
+
+async function aiRewriteWA(instruction) {
+  if (!waCurrentMsg) return;
+  document.getElementById('wa-thinking').classList.add('show');
+  try {
+    const sys = `Rewrite this WhatsApp message to be ${instruction}. Return ONLY the new message, no explanation.`;
+    waCurrentMsg = (await callClaude(sys, waCurrentMsg)).trim();
+    document.getElementById('wa-preview-text').textContent = waCurrentMsg;
+  } catch(e) { showToast('AI error'); }
+  document.getElementById('wa-thinking').classList.remove('show');
+}
+
+function clearWACompose() {
+  document.getElementById('wa-ai-prompt').value = '';
+  document.getElementById('wa-contact-name').value = '';
+  document.getElementById('wa-compose-area').style.display = 'none';
+  document.getElementById('wa-edit-area').style.display = 'none';
+  waCurrentMsg = '';
+}
+
+function editWAMessage() {
+  document.getElementById('wa-edit-text').value = waCurrentMsg;
+  document.getElementById('wa-edit-area').style.display = 'block';
+}
+function applyWAEdit() {
+  waCurrentMsg = document.getElementById('wa-edit-text').value.trim();
+  document.getElementById('wa-preview-text').textContent = waCurrentMsg;
+  document.getElementById('wa-edit-area').style.display = 'none';
+}
+function cancelWAEdit() { document.getElementById('wa-edit-area').style.display = 'none'; }
+
+function copyWAMessage() {
+  navigator.clipboard.writeText(waCurrentMsg).then(() => showToast('📋 Copied!'));
+}
+
+function buildWAUrl(phone, msg) {
+  const clean = phone.replace(/\D/g, '');
+  return `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`;
+}
+
+function sendWANow() {
+  const phone = document.getElementById('wa-phone').value.trim();
+  if (!phone) { showToast('Enter WhatsApp number first'); return; }
+  if (!waCurrentMsg) { showToast('Compose a message first'); return; }
+  window.open(buildWAUrl(phone, waCurrentMsg), '_blank');
+}
+
+function openScheduleWA() {
+  const area = document.getElementById('wa-schedule-area');
+  const showing = area.style.display !== 'none';
+  area.style.display = showing ? 'none' : 'block';
+  if (!showing) {
+    // default to now + 1 hour
+    const d = new Date(Date.now() + 3600000);
+    document.getElementById('wa-sched-date').value = d.toISOString().split('T')[0];
+    document.getElementById('wa-sched-time').value = d.toTimeString().slice(0,5);
+  }
+}
+
+function scheduleWASend() {
+  const phone = document.getElementById('wa-phone').value.trim();
+  const date = document.getElementById('wa-sched-date').value;
+  const time = document.getElementById('wa-sched-time').value;
+  const name = document.getElementById('wa-contact-name').value.trim();
+
+  if (!phone) { showToast('Enter WhatsApp number'); return; }
+  if (!date || !time) { showToast('Pick date and time'); return; }
+  if (!waCurrentMsg) { showToast('Compose a message first'); return; }
+
+  const sendAt = new Date(date + 'T' + time).getTime();
+  if (sendAt <= Date.now()) { showToast('Pick a future time'); return; }
+
+  const entry = {
+    id: uid(),
+    phone, name: name || phone,
+    message: waCurrentMsg,
+    sendAt,
+    created: new Date().toISOString(),
+    fired: false
+  };
+
+  waScheduled.unshift(entry);
+  saveWAScheduled();
+  scheduleTimer(entry);
+  renderWAScheduled();
+  showToast(`⏰ Scheduled for ${formatTime12(time)} on ${new Date(sendAt).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}`);
+  document.getElementById('wa-schedule-area').style.display = 'none';
+
+  // Request notification permission safely
+  if (typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission();
+}
+
+function scheduleTimer(entry) {
+  const delay = entry.sendAt - Date.now();
+  if (delay <= 0 || entry.fired) return;
+  waScheduleTimers[entry.id] = setTimeout(() => {
+    fireScheduled(entry.id);
+  }, delay);
+}
+
+function fireScheduled(id) {
+  const entry = waScheduled.find(e => e.id === id);
+  if (!entry || entry.fired) return;
+  entry.fired = true;
+  saveWAScheduled();
+  renderWAScheduled();
+
+  // Show notification
+  const notifTitle = `📲 WhatsApp: Send to ${entry.name}`;
+  const notifBody = entry.message.slice(0, 80) + (entry.message.length > 80 ? '...' : '');
+
+  if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+    const n = new Notification(notifTitle, { body: notifBody, icon: '💬' });
+    n.onclick = () => window.open(buildWAUrl(entry.phone, entry.message), '_blank');
+  }
+
+  // Also auto-open WhatsApp
+  window.open(buildWAUrl(entry.phone, entry.message), '_blank');
+  showToast(`📲 Opening WhatsApp for ${entry.name}`);
+}
+
+function deleteWASched(id) {
+  clearTimeout(waScheduleTimers[id]);
+  delete waScheduleTimers[id];
+  waScheduled = waScheduled.filter(e => e.id !== id);
+  saveWAScheduled();
+  renderWAScheduled();
+}
+
+function renderWAScheduled() {
+  const list = document.getElementById('wa-scheduled-list');
+  const pending = waScheduled.filter(e => !e.fired);
+  document.getElementById('wa-sched-count').textContent = `${pending.length} pending`;
+  document.getElementById('wa-badge').textContent = pending.length;
+
+  if (!waScheduled.length) {
+    list.innerHTML = '<div class="empty" style="padding:16px 0;"><div class="big" style="font-size:1.5rem;">📭</div>No scheduled messages</div>';
+    return;
+  }
+
+  list.innerHTML = [...waScheduled].sort((a,b) => a.sendAt - b.sendAt).map(e => {
+    const dt = new Date(e.sendAt);
+    const dtStr = dt.toLocaleDateString('en-IN',{day:'numeric',month:'short'}) + ' ' + formatTime12(dt.toTimeString().slice(0,5));
+    const isPast = e.fired;
+    return `
+    <div class="wa-sched-item ${isPast ? 'fired' : ''}">
+      <div class="wa-sched-icon">💬</div>
+      <div class="wa-sched-body">
+        <div class="wa-sched-to">📱 ${e.name || e.phone}</div>
+        <div class="wa-sched-msg">${e.message}</div>
+        <div class="wa-sched-time">${isPast ? '✅ Sent' : '⏰ ' + dtStr}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        ${!isPast ? `<button class="btn-ghost btn-sm" style="color:#25d366;border-color:#25d366;" onclick="window.open(buildWAUrl('${e.phone}', waScheduled.find(x=>x.id==='${e.id}').message),'_blank')">📲</button>` : ''}
+        <button class="btn-ghost btn-sm" onclick="deleteWASched('${e.id}')" style="border-color:rgba(255,107,107,0.3);color:var(--accent3)">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Boot scheduled timers on load
+function bootWATimers() {
+  waScheduled.forEach(e => { if (!e.fired) scheduleTimer(e); });
+}
+
+// ============================================================
+// MEMORY DB SYSTEM
+// ============================================================
+const DB_KEYS = {
+  'rickey_todos':        { label: 'Tasks',           icon: '✅' },
+  'rickey_reminders':    { label: 'Reminders',        icon: '📞' },
+  'rickey_notes':        { label: 'Notes',            icon: '📒' },
+  'rickey_photos':       { label: 'Photos',           icon: '📷' },
+  'rickey_wa_scheduled': { label: 'WA Scheduled',     icon: '💬' },
+  // legacy keys
+  'shreeji_todos':       { label: 'Tasks (legacy)',    icon: '✅' },
+  'shreeji_reminders':   { label: 'Reminders (legacy)',icon: '📞' },
+  'shreeji_notes':       { label: 'Notes (legacy)',    icon: '📒' },
+};
+
+function getBytes(str) { return new Blob([str]).size; }
+function formatBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB';
+  return (b/(1024*1024)).toFixed(2) + ' MB';
+}
+
+function renderMemoryDB() {
+  // Update stat counts
+  document.getElementById('db-todos-count').textContent = todos.length;
+  document.getElementById('db-rem-count').textContent = reminders.length;
+  document.getElementById('db-notes-count').textContent = notes.length;
+  document.getElementById('db-photos-count').textContent = photos.length;
+  document.getElementById('db-wa-count').textContent = waScheduled.length;
+
+  // Calculate total storage used
+  let totalBytes = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    totalBytes += getBytes(k) + getBytes(localStorage.getItem(k));
+  }
+  const maxBytes = 5 * 1024 * 1024; // 5MB estimate
+  const pct = Math.min((totalBytes / maxBytes) * 100, 100).toFixed(1);
+  document.getElementById('db-size-bar').style.width = pct + '%';
+  document.getElementById('db-size-bar').style.background = pct > 80 ? '#dc2626' : pct > 50 ? '#d97706' : 'var(--accent)';
+  document.getElementById('db-size-label').textContent = formatBytes(totalBytes) + ' / ~5 MB (' + pct + '%)';
+
+  // Render all keys
+  const list = document.getElementById('db-keys-list');
+  const rows = [];
+
+  // Known keys first
+  for (const [key, meta] of Object.entries(DB_KEYS)) {
+    const raw = localStorage.getItem(key);
+    if (!raw) continue;
+    let count = '—';
+    try { const arr = JSON.parse(raw); if (Array.isArray(arr)) count = arr.length + ' records'; } catch(e){}
+    rows.push({ key, icon: meta.icon, label: meta.label, size: getBytes(raw), count });
+  }
+  // Any other keys
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (DB_KEYS[k]) continue;
+    const raw = localStorage.getItem(k);
+    rows.push({ key: k, icon: '📦', label: k, size: getBytes(raw), count: '—' });
+  }
+
+  if (!rows.length) {
+    list.innerHTML = '<div class="empty" style="padding:16px 0;">No data stored yet</div>';
+    return;
+  }
+
+  list.innerHTML = rows.map(r => `
+    <div class="db-key-row">
+      <span style="font-size:1.1rem;">${r.icon}</span>
+      <div class="db-key-name">${r.key}</div>
+      <span class="db-key-count">${r.count}</span>
+      <span class="db-key-size">${formatBytes(r.size)}</span>
+    </div>
+  `).join('');
+}
+
+function exportAllData() {
+  const data = {
+    exported: new Date().toISOString(),
+    app: 'Rickey AI Agent',
+    todos,
+    reminders,
+    notes,
+    photos,
+    waScheduled
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'rickey-backup-' + new Date().toISOString().split('T')[0] + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ Backup downloaded!');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('db-import-file').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!confirm('This will REPLACE all current data. Continue?')) return;
+        if (data.todos)       { todos = data.todos; localStorage.setItem('rickey_todos', JSON.stringify(todos)); }
+        if (data.reminders)   { reminders = data.reminders; localStorage.setItem('rickey_reminders', JSON.stringify(reminders)); }
+        if (data.notes)       { notes = data.notes; localStorage.setItem('rickey_notes', JSON.stringify(notes)); }
+        if (data.photos)      { photos = data.photos; localStorage.setItem('rickey_photos', JSON.stringify(photos)); }
+        if (data.waScheduled) { waScheduled = data.waScheduled; localStorage.setItem('rickey_wa_scheduled', JSON.stringify(waScheduled)); }
+        renderTodos(); renderReminders(); renderNotes(); renderPhotos(); renderWAScheduled(); renderMemoryDB();
+        showToast('✅ Data restored from backup!');
+      } catch(err) {
+        showToast('❌ Invalid backup file');
+      }
+    };
+    reader.readAsText(file);
+    this.value = '';
+  });
+});
+
+function clearDBSection(section) {
+  const labels = { todos:'Tasks', reminders:'Reminders', notes:'Notes', photos:'Photos', wa:'WA Messages' };
+  if (!confirm('Clear all ' + labels[section] + '? Cannot undo.')) return;
+  if (section === 'todos')     { todos = []; save(); renderTodos(); }
+  if (section === 'reminders') { reminders = []; save(); renderReminders(); }
+  if (section === 'notes')     { notes = []; save(); renderNotes(); }
+  if (section === 'photos')    { photos = []; savePhotos(); renderPhotos(); }
+  if (section === 'wa')        { waScheduled = []; saveWAScheduled(); renderWAScheduled(); }
+  renderMemoryDB();
+  showToast('🗑️ Cleared!');
+}
+
+function clearAllData() {
+  if (!confirm('Delete ALL data? This cannot be undone!')) return;
+  if (!confirm('Are you absolutely sure? Everything will be gone.')) return;
+  localStorage.clear();
+  todos = []; reminders = []; notes = []; photos = []; waScheduled = [];
+  renderTodos(); renderReminders(); renderNotes(); renderPhotos(); renderWAScheduled(); renderMemoryDB();
+  showToast('🗑️ All data cleared');
+}
+
+// ============================================================
+// INIT
+// ============================================================
+renderTodos();
+renderReminders();
+renderNotes();
+renderPhotos();
+renderWAScheduled();
+bootWATimers();
+renderMemoryDB();
+initTemplates();
+renderContactPicker();
+initGoogleTab();
+if (typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission();
+
+// Wire VCF import
+document.getElementById('vcf-upload').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  importVCF(file);
+  this.value = '';
+});
+
+// Wire photo file inputs — both gallery and camera
+function handlePhotoFiles(files) {
+  if (!files || !files.length) return;
+  pendingPhotoFiles = Array.from(files);
+  pendingPhotoIndex = 0;
+  pendingImgData = '';
+  processNextPhoto();
+}
+
+document.getElementById('photo-upload').addEventListener('change', function() {
+  handlePhotoFiles(this.files);
+  this.value = '';
+});
+
+document.getElementById('photo-camera').addEventListener('change', function() {
+  handlePhotoFiles(this.files);
+  this.value = '';
+});
+
+// Cancel photo tag modal — skip this photo
+document.getElementById('modal-photo-tag').addEventListener('click', function(e) {
+  if (e.target === this) {
+    pendingImgData = '';
+    this.classList.remove('show');
+    pendingPhotoIndex++;
+    if (pendingPhotoIndex < pendingPhotoFiles.length) setTimeout(processNextPhoto, 300);
+  }
+});
+
+// ============================================================
+// VOICE / SPEECH RECOGNITION
+// ============================================================
+let activeRecognition = null;
+
+function startVoice(targetId, btnId, labelId) {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    showToast('❌ Voice not supported on this browser. Use Chrome.');
+    return;
+  }
+
+  const btn = document.getElementById(btnId);
+  const label = document.getElementById(labelId);
+  const input = document.getElementById(targetId);
+
+  // If already recording this same mic, stop it
+  if (activeRecognition && btn.classList.contains('recording')) {
+    activeRecognition.stop();
+    return;
+  }
+
+  // Stop any other active recognition
+  if (activeRecognition) activeRecognition.stop();
+
+  const rec = new SpeechRecognition();
+  rec.lang = 'en-IN';
+  rec.continuous = false;
+  rec.interimResults = true;
+
+  rec.onstart = () => {
+    activeRecognition = rec;
+    btn.classList.add('recording');
+    btn.textContent = '⏹';
+    label.textContent = 'Listening...';
+    label.classList.add('recording');
+  };
+
+  rec.onresult = (e) => {
+    let interim = '', final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) final += t;
+      else interim += t;
+    }
+    // Append to existing text
+    const existing = input.value.trim();
+    input.value = (existing ? existing + ' ' : '') + (final || interim);
+  };
+
+  rec.onerror = (e) => {
+    showToast('🎤 Mic error: ' + (e.error === 'not-allowed' ? 'Allow mic permission' : e.error));
+    resetMic(btn, label);
+  };
+
+  rec.onend = () => {
+    resetMic(btn, label);
+    activeRecognition = null;
+    // Auto-trigger AI if input has text
+    if (input.value.trim()) showToast('🎤 Voice captured! Hit Generate to process.');
+  };
+
+  rec.start();
+}
+
+function resetMic(btn, label) {
+  btn.classList.remove('recording');
+  btn.textContent = '🎤';
+  label.textContent = 'Tap';
+  label.classList.remove('recording');
+}
+
+
+// ============================================================
+// GOOGLE INTEGRATION
+// ============================================================
+const GSCOPES = [
+  'https://www.googleapis.com/auth/contacts.readonly',
+  'https://www.googleapis.com/auth/calendar',
+  'https://www.googleapis.com/auth/gmail.send',
+  'profile','email'
+].join(' ');
+
+function copyOrigin() {
+  const origin = window.location.origin;
+  navigator.clipboard.writeText(origin).then(() => showToast('Origin copied!'));
+}
+
+function initGoogleTab() {
+  // Hardcoded Client ID — always set
+  if (!gClientId) gClientId = '862446986268-6gmciu3vhhv50udesorlf6ke5n2pbeoq.apps.googleusercontent.com';
+  localStorage.setItem('g_client_id', gClientId);
+
+  // Set origin display
+  const el = document.getElementById('g-origin-code');
+  if (el) el.textContent = window.location.origin;
+
+  // Pre-fill input
+  const inp = document.getElementById('g-client-id');
+  if (inp) inp.value = gClientId;
+
+  // If already have token restore session
+  if (gAccessToken && gClientId) {
+    loadGoogleIdentityScript(() => setupTokenClient(true));
+  }
+}
+
+function loadGoogleIdentityScript(cb) {
+  if (window.google && window.google.accounts) { cb(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://accounts.google.com/gsi/client';
+  s.onload = cb;
+  s.onerror = () => showToast('❌ Could not load Google SDK — check internet');
+  document.head.appendChild(s);
+}
+
+function initGoogleAuth() {
+  const clientId = document.getElementById('g-client-id').value.trim();
+  if (!clientId) { showToast('Paste your Client ID first'); return; }
+  gClientId = clientId;
+  localStorage.setItem('g_client_id', clientId);
+  loadGoogleIdentityScript(() => setupTokenClient(false));
+}
+
+function setupTokenClient(silent) {
+  gTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: gClientId,
+    scope: GSCOPES,
+    callback: (resp) => {
+      if (resp.error) { showToast('❌ Auth failed: ' + resp.error); return; }
+      gAccessToken = resp.access_token;
+      localStorage.setItem('g_access_token', gAccessToken);
+      fetchGoogleProfile();
+    }
+  });
+  if (!silent) {
+    gTokenClient.requestAccessToken({ prompt: 'consent' });
+  } else {
+    // Try silent refresh
+    gTokenClient.requestAccessToken({ prompt: '' });
+  }
+}
+
+function fetchGoogleProfile() {
+  fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: { Authorization: 'Bearer ' + gAccessToken }
+  }).then(r => r.json()).then(info => {
+    document.getElementById('g-user-info').textContent = '👤 ' + (info.name || '') + '  •  ' + (info.email || '');
+    document.getElementById('g-setup-panel').style.display = 'none';
+    document.getElementById('g-connected-panel').style.display = 'block';
+    document.getElementById('gs-auth').innerHTML = '<span class="g-dot connected"></span><span>' + (info.email || 'Connected') + '</span>';
+    document.getElementById('gs-contacts').style.display = 'flex';
+    document.getElementById('gs-calendar').style.display = 'flex';
+    document.getElementById('gs-gmail').style.display = 'flex';
+    document.getElementById('g-badge').style.display = 'inline-block';
+    showToast('✅ Google connected!');
+  }).catch(() => {
+    gAccessToken = '';
+    localStorage.removeItem('g_access_token');
+    showToast('Session expired — please reconnect');
+  });
+}
+
+function gSignOut() {
+  if (!confirm('Disconnect Google account?')) return;
+  if (gAccessToken) google.accounts.oauth2.revoke(gAccessToken, () => {});
+  gAccessToken = '';
+  localStorage.removeItem('g_access_token');
+  document.getElementById('g-setup-panel').style.display = 'block';
+  document.getElementById('g-connected-panel').style.display = 'none';
+  document.getElementById('gs-auth').innerHTML = '<span class="g-dot disconnected"></span><span>Not connected</span>';
+  ['gs-contacts','gs-calendar','gs-gmail'].forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById('g-badge').style.display = 'none';
+  showToast('Disconnected from Google');
+}
+
+// ---- GOOGLE CONTACTS ----
+async function importGoogleContacts() {
+  if (!gAccessToken) { showToast('Connect Google first'); return; }
+  const status = document.getElementById('g-contacts-status');
+  status.style.display = 'block'; status.textContent = '⏳ Fetching contacts...';
+  try {
+    let imported = 0, skipped = 0, pageToken = '';
+    const existingPhones = new Set(contacts.map(c => c.phone));
+    do {
+      const url = 'https://people.googleapis.com/v1/people/me/connections'
+        + '?personFields=names,phoneNumbers&pageSize=200'
+        + (pageToken ? '&pageToken=' + pageToken : '');
+      const resp = await fetch(url, { headers: { Authorization: 'Bearer ' + gAccessToken } });
+      if (!resp.ok) throw new Error('API error ' + resp.status);
+      const data = await resp.json();
+      pageToken = data.nextPageToken || '';
+      (data.connections || []).forEach(p => {
+        const name = p.names?.[0]?.displayName;
+        if (!name || !p.phoneNumbers?.length) return;
+        p.phoneNumbers.forEach(ph => {
+          let digits = ph.value.replace(/\D/g,'');
+          if (digits.startsWith('0')) digits = '91' + digits.slice(1);
+          if (digits.length === 10) digits = '91' + digits;
+          if (digits.length < 10) return;
+          if (existingPhones.has(digits)) { skipped++; return; }
+          existingPhones.add(digits);
+          contacts.push({ id: uid(), name, phone: digits, type: 'other', note: 'Google', imported: true });
+          imported++;
+        });
+      });
+    } while (pageToken);
+
+    saveContacts(); renderContacts(); renderContactPicker();
+    const label = `✅ ${imported} contacts imported, ${skipped} duplicates skipped`;
+    status.textContent = label;
+    document.getElementById('gs-contacts-label').textContent = `Contacts (${contacts.length})`;
+    showToast('👥 ' + label);
+  } catch(e) {
+    status.textContent = '❌ Error: ' + e.message + ' — try reconnecting';
+    if (e.message.includes('401')) { gAccessToken = ''; localStorage.removeItem('g_access_token'); }
+  }
+}
+
+// ---- GOOGLE CALENDAR ----
+async function pushRemindersToCalendar() {
+  if (!gAccessToken) { showToast('Connect Google first'); return; }
+  const status = document.getElementById('g-cal-status');
+  status.style.display = 'block'; status.textContent = '⏳ Pushing to Google Calendar...';
+  const pending = reminders.filter(r => r.dueDate && !r.done);
+  if (!pending.length) { status.textContent = '⚠️ No reminders with dates to push'; return; }
+  let pushed = 0;
+  for (const r of pending) {
+    try {
+      const startTime = r.dueDate + 'T' + (r.callTime || '09:00') + ':00';
+      const endTime   = r.dueDate + 'T' + (r.callTime ? addOneHour(r.callTime) : '10:00') + ':00';
+      const event = {
+        summary: (r.type === 'payment' ? '💰 Payment: ' : r.type === 'sales' ? '📦 Sales: ' : '📞 Call: ') + r.name,
+        description: (r.note || '') + (r.amount ? '\nAmount: ₹' + Number(r.amount).toLocaleString('en-IN') : ''),
+        start: { dateTime: startTime, timeZone: 'Asia/Kolkata' },
+        end:   { dateTime: endTime,   timeZone: 'Asia/Kolkata' },
+        reminders: { useDefault: false, overrides: [{ method:'popup', minutes:30 }, { method:'email', minutes:60 }] }
+      };
+      const resp = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+        method:'POST',
+        headers:{ Authorization:'Bearer '+gAccessToken, 'Content-Type':'application/json' },
+        body: JSON.stringify(event)
+      });
+      if (resp.ok) pushed++;
+    } catch(e) { console.error(e); }
+  }
+  status.textContent = `✅ ${pushed} reminders pushed to Google Calendar`;
+  showToast(`📅 ${pushed} events added to Google Calendar!`);
+  viewCalendarEvents();
+}
+
+function addOneHour(t) {
+  const [h,m] = t.split(':').map(Number);
+  return String((h+1)%24).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+}
+
+async function viewCalendarEvents() {
+  if (!gAccessToken) return;
+  const list = document.getElementById('g-cal-list');
+  list.innerHTML = '<div style="font-size:0.78rem;color:var(--muted);">Loading...</div>';
+  try {
+    const now = new Date().toISOString();
+    const resp = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/primary/events?orderBy=startTime&singleEvents=true&timeMin=${now}&maxResults=10`,
+      { headers: { Authorization: 'Bearer ' + gAccessToken } }
+    );
+    const data = await resp.json();
+    const events = data.items || [];
+    if (!events.length) { list.innerHTML = '<div style="font-size:0.78rem;color:var(--muted);">No upcoming events</div>'; return; }
+    list.innerHTML = events.map(ev => {
+      const dt = ev.start.dateTime || ev.start.date;
+      const dateStr = new Date(dt).toLocaleDateString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+      return `<div class="db-key-row"><span style="font-size:0.9rem;">📅</span><div class="db-key-name" style="color:var(--text);">${ev.summary}</div><span class="db-key-size">${dateStr}</span></div>`;
+    }).join('');
+  } catch(e) {
+    list.innerHTML = '<div style="font-size:0.78rem;color:#dc2626;">Could not load events</div>';
+  }
+}
+
+// ---- GMAIL ----
+async function aiWriteEmail() {
+  const prompt = document.getElementById('g-email-prompt').value.trim();
+  const to = document.getElementById('g-email-to').value.trim();
+  const subject = document.getElementById('g-email-subject').value.trim();
+  if (!prompt) { showToast('Describe what email should say'); return; }
+  document.getElementById('g-email-thinking').classList.add('show');
+  document.getElementById('g-email-preview').style.display = 'none';
+  try {
+    const sys = `You are a professional email writer for a business owner named Rickey.
+Write a clear, professional email body. Use Indian business context.
+${to ? 'To: ' + to : ''} ${subject ? 'Subject: ' + subject : ''}
+Return ONLY the email body text — no subject line, no greeting header, just the body starting with greeting.`;
+    gEmailBody = (await callClaude(sys, prompt)).trim();
+    document.getElementById('g-email-body-preview').textContent = gEmailBody;
+    document.getElementById('g-email-preview').style.display = 'block';
+  } catch(e) { showToast('AI error'); }
+  document.getElementById('g-email-thinking').classList.remove('show');
+}
+
+async function sendGmail() {
+  if (!gAccessToken) { showToast('Connect Google first'); return; }
+  const to = document.getElementById('g-email-to').value.trim();
+  const subject = document.getElementById('g-email-subject').value.trim();
+  if (!to || !subject || !gEmailBody) { showToast('Fill To, Subject and generate email first'); return; }
+  const status = document.getElementById('g-email-status');
+  status.style.display = 'block'; status.textContent = '⏳ Sending...';
+  try {
+    const message = ['To: ' + to, 'Subject: ' + subject, 'Content-Type: text/plain; charset=utf-8', '', gEmailBody].join('\n');
+    const encoded = btoa(unescape(encodeURIComponent(message))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    const resp = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+      method:'POST',
+      headers:{ Authorization:'Bearer '+gAccessToken, 'Content-Type':'application/json' },
+      body: JSON.stringify({ raw: encoded })
+    });
+    if (resp.ok) {
+      status.textContent = '✅ Email sent via Gmail!';
+      showToast('📧 Email sent!');
+      document.getElementById('g-email-preview').style.display = 'none';
+      document.getElementById('g-email-prompt').value = '';
+      document.getElementById('g-email-to').value = '';
+      document.getElementById('g-email-subject').value = '';
+    } else {
+      const err = await resp.json();
+      status.textContent = '❌ Failed: ' + (err.error?.message || 'Unknown error');
+    }
+  } catch(e) { status.textContent = '❌ Error: ' + e.message; }
+}
+document.querySelectorAll('.overlay:not(#modal-photo-tag), .note-detail').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) { el.classList.remove('show'); currentNoteId = null; } });
+});
+
+// Enter key for inputs
+document.getElementById('todo-prompt').addEventListener('keydown', e => { if(e.key==='Enter') aiGenerateTodo(); });
+document.getElementById('rem-prompt').addEventListener('keydown', e => { if(e.key==='Enter') aiGenerateReminder(); });
+
+// ============================================================
+// MOBILE NAV
+// ============================================================
+function syncMobileBadges() {
+  const pendingTodos = todos.filter(t => !t.done).length;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const pendingRem = reminders.filter(r => {
+    if (!r.dueDate || r.done) return false;
+    const due = new Date(r.dueDate); due.setHours(0,0,0,0);
+    return Math.round((due - today)/86400000) <= 0;
+  }).length;
+  const pendingWA = waScheduled.filter(e => !e.fired).length;
+
+  const tb = document.getElementById('mn-todo-badge');
+  const rb = document.getElementById('mn-rem-badge');
+  const wb = document.getElementById('mn-wa-badge');
+  if (tb) { tb.textContent = pendingTodos; tb.style.display = pendingTodos ? 'block':'none'; }
+  if (rb) { rb.textContent = pendingRem;  rb.style.display  = pendingRem  ? 'block':'none'; }
+  if (wb) { wb.textContent = pendingWA;   wb.style.display  = pendingWA   ? 'block':'none'; }
+}
+// Sync badges after every render
+const _origRenderTodos     = renderTodos;     renderTodos     = (...a) => { _origRenderTodos(...a);     syncMobileBadges(); };
+const _origRenderReminders = renderReminders; renderReminders = (...a) => { _origRenderReminders(...a); syncMobileBadges(); };
+const _origRenderWASched   = renderWAScheduled; renderWAScheduled = (...a) => { _origRenderWASched(...a); syncMobileBadges(); };
+
+// ============================================================
+// SERVICE WORKER — PWA offline cache
+// ============================================================
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js', { scope: './' })
+    .then(() => console.log('✅ PWA Service Worker ready'))
+    .catch(e => console.log('SW skipped:', e.message));
+}
+
+// ============================================================
+// PWA INSTALL PROMPT
+// ============================================================
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  // Show install button in header
+  const btn = document.getElementById('pwa-install-btn');
+  if (btn) btn.style.display = 'flex';
+});
+window.addEventListener('appinstalled', () => {
+  const btn = document.getElementById('pwa-install-btn');
+  if (btn) btn.style.display = 'none';
+  showToast('✅ App installed! Open from home screen');
+});
+
+function installPWA() {
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.then(r => {
+      if (r.outcome === 'accepted') showToast('✅ Installing...');
+      deferredInstallPrompt = null;
+    });
+  } else {
+    showToast('Open in Chrome → tap ⋮ → Add to Home Screen');
+  }
+}
+</script>
+</body>
+</html>

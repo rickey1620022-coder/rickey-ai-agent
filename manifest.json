@@ -1,0 +1,49 @@
+{
+  "name": "Rickey AI Agent",
+  "short_name": "Rickey AI",
+  "description": "Smart AI business assistant — Tasks, Reminders, Notes, WhatsApp, Google",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#7c3aed",
+  "orientation": "portrait-primary",
+  "lang": "en-IN",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Add Task",
+      "short_name": "Task",
+      "description": "Add a new task",
+      "url": "./index.html#todo",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Add Reminder",
+      "short_name": "Remind",
+      "description": "Add a call reminder",
+      "url": "./index.html#reminders",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "WhatsApp",
+      "short_name": "WA",
+      "description": "Send WhatsApp message",
+      "url": "./index.html#whatsapp",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
