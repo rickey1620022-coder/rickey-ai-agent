@@ -815,7 +815,7 @@
       </div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
-      <button class="btn btn-accent" onclick="aiGenerateTodo()">⚡ Generate with AI</button>
+      <button class="btn btn-accent" onclick="aiGenerateTodo()">⚡ Add Tasks</button>
       <button class="btn btn-blue" onclick="openAddTodo()">+ Add Manually</button>
       <button class="btn-ghost" onclick="clearDone()">Clear Done</button>
     </div>
@@ -858,7 +858,7 @@
       </div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
-      <button class="btn btn-accent" onclick="aiGenerateReminder()">⚡ Generate with AI</button>
+      <button class="btn btn-accent" onclick="aiGenerateReminder()">⚡ Add Tasks</button>
       <button class="btn btn-blue" onclick="openAddReminder()">+ Add Manually</button>
     </div>
     <div class="ai-thinking" id="rem-thinking">
@@ -900,7 +900,7 @@
       </div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
-      <button class="btn btn-accent" onclick="aiSaveNote()">⚡ AI Save Note</button>
+      <button class="btn btn-accent" onclick="aiSaveNote()">💾 Save Note</button>
       <button class="btn btn-blue" onclick="openAddNote()">+ Add Manually</button>
     </div>
     <div class="ai-thinking" id="note-thinking">
@@ -973,7 +973,7 @@
         </div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-accent" onclick="aiComposeWA()">⚡ AI Write</button>
+        <button class="btn btn-accent" onclick="aiComposeWA()">⚡ Add Reminder</button>
         <button class="btn-ghost" onclick="clearWACompose()">Clear</button>
       </div>
       <div class="ai-thinking" id="wa-thinking">
@@ -1280,7 +1280,7 @@
         <textarea id="g-email-prompt" placeholder="What should the email say? AI will write it professionally..." style="min-height:60px;"></textarea>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-accent" onclick="aiWriteEmail()">⚡ AI Write Email</button>
+        <button class="btn btn-accent" onclick="aiWriteEmail()">⚡ Add Reminder Email</button>
       </div>
       <div class="ai-thinking" id="g-email-thinking">
         <div class="dots"><span></span><span></span><span></span></div> Writing email...
@@ -1639,33 +1639,42 @@ function openAddReminder() {
 function openAddNote() { document.getElementById('modal-note').classList.add('show'); }
 
 // ============================================================
-// TO-DO
+// TO-DO — INSTANT LOCAL SMART PARSER (no AI needed)
 // ============================================================
-async function aiGenerateTodo() {
+function smartParseTodo(text) {
+  // Priority detection
+  const highWords = /payment|pay|due|urgent|asap|today|overdue|collect|bill|invoice/i;
+  const lowWords  = /check|review|update|read|look|maybe|sometime/i;
+  const priority  = highWords.test(text) ? 'high' : lowWords.test(text) ? 'low' : 'med';
+
+  // Category detection
+  const cats = [
+    { r: /payment|pay|collect|bill|invoice|amount|money|₹|rs\./i, c: 'Payment' },
+    { r: /call|phone|contact|ring|talk|speak|meet/i,               c: 'Call' },
+    { r: /order|sale|client|customer|quote|enquiry|follow/i,        c: 'Sales' },
+    { r: /stock|material|aluminium|heatsink|inventory|raw/i,        c: 'Stock' },
+    { r: /deliver|dispatch|send|ship|transport/i,                   c: 'Delivery' },
+    { r: /cut|produce|manufacture|make|fabricat/i,                  c: 'Production' },
+  ];
+  const cat = (cats.find(x => x.r.test(text)) || { c: 'General' }).c;
+
+  // Split by comma / and / then / also into multiple tasks
+  const parts = text.split(/,|;| and | then | also /i)
+    .map(s => s.trim()).filter(s => s.length > 2);
+
+  return parts.map(p => ({ text: p, priority, category: cat }));
+}
+
+function aiGenerateTodo() {
   const prompt = document.getElementById('todo-prompt').value.trim();
   if (!prompt) { showToast('Type something first!'); return; }
-  document.getElementById('todo-thinking').classList.add('show');
-  try {
-    const sys = `You are a task management AI for a business owner named Rickey.
-Extract actionable tasks from user input and return ONLY valid JSON array, no markdown, no preamble.
-Each task object: { "text": string, "priority": "high"|"med"|"low", "category": string }
-Priority rules: payment/due/urgent = high, follow-up/call = med, general = low.
-Category examples: Payment, Sales, Stock, Delivery, Production, Admin.`;
-    const raw = await callClaude(sys, prompt);
-    const clean = raw.replace(/```json|```/gi, '').trim();
-    const tasks = JSON.parse(clean);
-    tasks.forEach(t => {
-      todos.unshift({ id: uid(), text: t.text, priority: t.priority || 'med', category: t.category || 'General', done: false, created: new Date().toISOString() });
-    });
-    save(); renderTodos();
-    document.getElementById('todo-prompt').value = '';
-    showToast(`✅ Added ${tasks.length} task(s)`);
-  } catch(e) {
-    showToast('❌ ' + (e.message || 'AI error — try again'));
-    console.error(e);
-  } finally {
-    document.getElementById('todo-thinking').classList.remove('show');
-  }
+  const tasks = smartParseTodo(prompt);
+  tasks.forEach(t => {
+    todos.unshift({ id: uid(), text: t.text, priority: t.priority, category: t.category, done: false, created: new Date().toISOString() });
+  });
+  save(); renderTodos();
+  document.getElementById('todo-prompt').value = '';
+  showToast(`✅ Added ${tasks.length} task(s)`);
 }
 
 function addTodoManual() {
@@ -1733,34 +1742,78 @@ function renderTodos() {
 }
 
 // ============================================================
-// REMINDERS
+// REMINDERS — INSTANT LOCAL SMART PARSER
 // ============================================================
-async function aiGenerateReminder() {
+function smartParseReminder(text) {
+  // Detect type
+  const type = /payment|pay|amount|₹|rs\.|collect|due|bill/i.test(text) ? 'payment'
+             : /order|sale|follow|enquiry|quote|product/i.test(text) ? 'sales' : 'call';
+
+  // Extract amount ₹45000 or Rs.45000 or 45000
+  const amtMatch = text.match(/(?:₹|rs\.?|inr)?\s*(\d[\d,]*)/i);
+  const amount = amtMatch ? parseInt(amtMatch[1].replace(/,/g,'')) : null;
+
+  // Extract date — "20th May", "May 20", "tomorrow", "today", "20/5"
+  let dueDate = null;
+  const months = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  const today = new Date();
+  if (/today/i.test(text)) {
+    dueDate = today.toISOString().split('T')[0];
+  } else if (/tomorrow/i.test(text)) {
+    const t = new Date(today); t.setDate(t.getDate()+1);
+    dueDate = t.toISOString().split('T')[0];
+  } else {
+    // Try "20th May" or "May 20" or "20/5" or "20-5"
+    const dm = text.match(/(\d{1,2})(?:st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i)
+            || text.match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\s+(\d{1,2})/i)
+            || text.match(/(\d{1,2})[\/\-](\d{1,2})/);
+    if (dm) {
+      let day, mon;
+      if (months.includes((dm[1]||'').toLowerCase().slice(0,3))) {
+        mon = months.indexOf(dm[1].toLowerCase().slice(0,3));
+        day = parseInt(dm[2]);
+      } else if (months.includes((dm[2]||'').toLowerCase().slice(0,3))) {
+        day = parseInt(dm[1]);
+        mon = months.indexOf(dm[2].toLowerCase().slice(0,3));
+      } else {
+        day = parseInt(dm[1]); mon = parseInt(dm[2])-1;
+      }
+      const yr = today.getFullYear();
+      const d = new Date(yr, mon, day);
+      if (d < today) d.setFullYear(yr+1);
+      dueDate = d.toISOString().split('T')[0];
+    }
+  }
+
+  // Extract time — "11am", "3:30pm", "at 11", "15:00"
+  let callTime = null;
+  const tm = text.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i)
+           || text.match(/at\s+(\d{1,2})(?::(\d{2}))?/i)
+           || text.match(/(\d{2}):(\d{2})/);
+  if (tm) {
+    let h = parseInt(tm[1]), m = parseInt(tm[2]||0);
+    if (tm[3]) { // has am/pm
+      if (/pm/i.test(tm[3]) && h < 12) h += 12;
+      if (/am/i.test(tm[3]) && h === 12) h = 0;
+    }
+    callTime = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+  }
+
+  // Extract name — first proper noun or quoted text or whole text
+  const nameMatch = text.match(/"([^"]+)"/) || text.match(/for\s+([A-Z][a-zA-Z\s]+?)(?:\s+for|\s+pay|,|$)/);
+  const name = nameMatch ? nameMatch[1].trim() : text.split(/,|\bfor\b|\bpay\b/i)[0].trim().slice(0,40);
+
+  return { name, type, amount, dueDate, callTime, note: text };
+}
+
+function aiGenerateReminder() {
   const prompt = document.getElementById('rem-prompt').value.trim();
   if (!prompt) { showToast('Type something first!'); return; }
-  document.getElementById('rem-thinking').classList.add('show');
-  try {
-    const today = new Date().toISOString().split('T')[0];
-    const sys = `You are a business reminder AI for Rickey.
-Extract payment/sales/call reminders. Return ONLY valid JSON array, no markdown.
-Each object: { "name": string, "type": "payment"|"sales"|"call", "amount": number|null, "dueDate": "YYYY-MM-DD"|null, "callTime": "HH:MM"|null, "note": string }
-Today is ${today}. Infer dates from context (e.g. "20th May" = current or next May 20). Extract time if mentioned (e.g. "at 11am" = "11:00", "3:30 pm" = "15:30").
-Amount only for payment type. If no amount, set null.`;
-    const raw = await callClaude(sys, prompt);
-    const clean = raw.replace(/```json|```/gi, '').trim();
-    const items = JSON.parse(clean);
-    items.forEach(r => {
-      reminders.unshift({ id: uid(), name: r.name, type: r.type || 'call', amount: r.amount || null, dueDate: r.dueDate || null, callTime: r.callTime || null, note: r.note || '', done: false, created: new Date().toISOString() });
-    });
-    save(); renderReminders();
-    document.getElementById('rem-prompt').value = '';
-    showToast(`📞 Added ${items.length} reminder(s)`);
-  } catch(e) {
-    showToast('❌ ' + (e.message || 'AI error — try again'));
-    console.error(e);
-  } finally {
-    document.getElementById('rem-thinking').classList.remove('show');
-  }
+  const r = smartParseReminder(prompt);
+  reminders.unshift({ id: uid(), name: r.name, type: r.type, amount: r.amount, dueDate: r.dueDate, callTime: r.callTime, note: r.note, done: false, created: new Date().toISOString() });
+  save(); renderReminders();
+  document.getElementById('rem-prompt').value = '';
+  showToast('📞 Reminder added!');
 }
 
 function addReminderManual() {
@@ -1845,6 +1898,10 @@ function renderReminders() {
         <div class="reminder-title">${r.name}${r.amount ? ` &nbsp;<span class="reminder-amount">₹${Number(r.amount).toLocaleString('en-IN')}</span>` : ''}</div>
         <div class="reminder-sub">${r.note || (r.type === 'payment' ? 'Payment collection' : r.type === 'sales' ? 'Sales follow-up' : 'Call reminder')}</div>
         ${(callDateStr || callTimeStr) ? `<div class="call-time-badge">📅 ${callDateStr}${callTimeStr ? ' &nbsp;⏰ ' + callTimeStr : ''}</div>` : ''}
+        <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap;">
+          <button class="btn-ghost btn-sm" style="color:#25d366;border-color:#25d366;font-size:0.7rem;" onclick="sendReminderWA('${r.id}')">💬 WA</button>
+          <button class="btn-ghost btn-sm" style="color:#4285f4;border-color:#4285f4;font-size:0.7rem;" onclick="addReminderToCalendar('${r.id}')">📅 Cal</button>
+        </div>
       </div>
       <span class="due-badge ${due.cls}">${due.label}</span>
       <div style="display:flex;flex-direction:column;gap:5px;">
@@ -1855,30 +1912,76 @@ function renderReminders() {
   }).join('');
 }
 
+// Send reminder via WhatsApp — opens WA with pre-typed message
+function sendReminderWA(id) {
+  const r = reminders.find(x => x.id === id);
+  if (!r) return;
+  // Find contact phone if exists
+  const contact = contacts.find(c => c.name.toLowerCase().includes(r.name.toLowerCase().split(' ')[0]) || r.name.toLowerCase().includes(c.name.toLowerCase().split(' ')[0]));
+  const msg = r.type === 'payment'
+    ? `Hello ${r.name}, this is a gentle reminder for payment${r.amount ? ' of ₹' + Number(r.amount).toLocaleString('en-IN') : ''}${r.dueDate ? ' due on ' + new Date(r.dueDate).toLocaleDateString('en-IN',{day:'numeric',month:'short'}) : ''}. Kindly arrange at your earliest. Thank you 🙏`
+    : r.type === 'sales'
+    ? `Hello ${r.name}, wanted to follow up on our last discussion. Please let me know if you have any requirements. Thank you 🙏`
+    : `Hello ${r.name}, this is a reminder for our call${r.dueDate ? ' on ' + new Date(r.dueDate).toLocaleDateString('en-IN',{day:'numeric',month:'short'}) : ''}${r.callTime ? ' at ' + formatTime12(r.callTime) : ''}. Please confirm. Thank you 🙏`;
+  if (contact) {
+    window.open('https://wa.me/' + contact.phone + '?text=' + encodeURIComponent(msg), '_blank');
+  } else {
+    // No contact found — open WA number picker
+    const phone = prompt('Enter WhatsApp number (with country code e.g. 919876543210):');
+    if (phone) window.open('https://wa.me/' + phone.replace(/\D/g,'') + '?text=' + encodeURIComponent(msg), '_blank');
+  }
+}
+
+// Add reminder to Google Calendar via link (no API needed)
+function addReminderToCalendar(id) {
+  const r = reminders.find(x => x.id === id);
+  if (!r) return;
+  const title = encodeURIComponent((r.type==='payment'?'💰 Pay: ':'r.type==='sales'?'📦 Sales: ':'📞 Call: ')+r.name+(r.amount?' ₹'+r.amount:''));
+  const details = encodeURIComponent(r.note || '');
+  let dates = '';
+  if (r.dueDate) {
+    const d = r.dueDate.replace(/-/g,'');
+    const t = r.callTime ? r.callTime.replace(':','') + '00' : '090000';
+    const [h,m] = (r.callTime||'09:00').split(':').map(Number);
+    const endH = String(h+1).padStart(2,'0');
+    const endT = endH + String(m).padStart(2,'0') + '00';
+    dates = `${d}T${t}/${d}T${endT}`;
+  } else {
+    const d = new Date().toISOString().split('T')[0].replace(/-/g,'');
+    dates = `${d}T090000/${d}T100000`;
+  }
+  window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}&ctz=Asia/Kolkata`, '_blank');
+}
+
 // ============================================================
-// NOTES
+// NOTES — INSTANT SMART SAVE (no AI)
 // ============================================================
-async function aiSaveNote() {
+function aiSaveNote() {
   const content = document.getElementById('note-prompt').value.trim();
   if (!content) { showToast('Type a note first!'); return; }
-  document.getElementById('note-thinking').classList.add('show');
-  try {
-    const sys = `You are a smart note organizer for a business owner named Rickey.
-Analyze the note and return ONLY valid JSON (no markdown):
-{ "title": string (short, descriptive), "summary": string (1-2 lines), "tags": string[] (3-6 relevant tags, lowercase), "body": string (formatted, keep full info) }`;
-    const raw = await callClaude(sys, content);
-    const clean = raw.replace(/```json|```/gi, '').trim();
-    const note = JSON.parse(clean);
-    notes.unshift({ id: uid(), title: note.title, summary: note.summary, tags: note.tags || [], body: note.body || content, created: new Date().toISOString() });
-    save(); renderNotes();
-    document.getElementById('note-prompt').value = '';
-    showToast('📒 Note saved!');
-  } catch(e) {
-    showToast('❌ ' + (e.message || 'AI error — try again'));
-    console.error(e);
-  } finally {
-    document.getElementById('note-thinking').classList.remove('show');
-  }
+
+  // Smart title — first sentence or first 6 words
+  const firstLine = content.split(/[.\n]/)[0].trim();
+  const title = firstLine.split(' ').slice(0,6).join(' ') + (firstLine.split(' ').length > 6 ? '...' : '');
+
+  // Smart tags from keywords
+  const tagMap = [
+    { r:/payment|pay|₹|amount|bill|invoice/i,  t:'payment'  },
+    { r:/call|phone|contact|ring/i,              t:'call'     },
+    { r:/order|sale|client|customer/i,           t:'sales'    },
+    { r:/stock|material|aluminium|inventory/i,   t:'stock'    },
+    { r:/deliver|dispatch|ship/i,                t:'delivery' },
+    { r:/meeting|meet|discuss/i,                 t:'meeting'  },
+    { r:/urgent|asap|today|important/i,          t:'urgent'   },
+    { r:/idea|plan|future|consider/i,            t:'idea'     },
+  ];
+  const tags = tagMap.filter(x => x.r.test(content)).map(x => x.t).slice(0,4);
+  if (!tags.length) tags.push('note');
+
+  notes.unshift({ id: uid(), title, summary: content.slice(0,100), tags, body: content, created: new Date().toISOString() });
+  save(); renderNotes();
+  document.getElementById('note-prompt').value = '';
+  showToast('📒 Note saved!');
 }
 
 function addNoteManual() {
