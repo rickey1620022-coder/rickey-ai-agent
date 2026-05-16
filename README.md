@@ -3,7 +3,7 @@
 A smart personal AI business assistant — installable as a mobile app (PWA).
 
 ## 🌐 Live App
-👉 **https://rickey1620022.github.io/rickey-ai-agent**
+👉 **https://rickey1620022-coder.github.io/rickey-ai-agent**
 
 ## ✨ Features
 - ✅ **AI To-Do** — speak or type tasks, AI auto-categorises
