@@ -501,6 +501,13 @@
     font-size:0.88rem;
   }
   .wa-btn-schedule:hover { background: #5b21b6; transform:translateY(-1px); }
+  .wa-quick-tpl {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 5px 12px;
+    font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.75rem;
+    cursor: pointer; color: var(--text); transition: all 0.2s;
+  }
+  .wa-quick-tpl:hover { border-color: #25d366; color: #25d366; background: rgba(37,211,102,0.06); }
   .wa-bubble {
     background: #e7fbe6; border-radius: 0 12px 12px 12px;
     padding: 12px 14px; font-size: 0.88rem; line-height: 1.7;
@@ -711,21 +718,16 @@
 <header class="header">
   <div>
     <div class="header-title">RICKEY <span>AI</span> AGENT</div>
-    <div style="font-size:0.62rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v2.1.0</div>
+    <div style="font-size:0.62rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v2.2.0</div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <button onclick="openAPIKeySetup()" id="api-key-btn" style="background:rgba(220,38,38,0.1);border:1px solid rgba(220,38,38,0.3);color:#dc2626;border-radius:8px;padding:5px 10px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.7rem;cursor:pointer;" title="Set Claude API Key">🔑 API Key</button>
     <button id="pwa-install-btn" onclick="installPWA()" style="display:none;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;">
       📲 Install App
     </button>
-    <div class="status-dot" id="ai-status-dot" title="AI Status"></div>
+    <div class="status-dot" style="background:var(--accent);box-shadow:0 0 8px var(--accent);" title="All systems ready"></div>
   </div>
 </header>
 
-<!-- API KEY MODAL -->
-<div class="overlay" id="modal-apikey">
-  <div class="modal">
-    <div class="modal-title">🔑 Claude API Key</div>
     <div style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.6;">
       Get your free API key from <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent);">console.anthropic.com</a><br>
       → Sign up → API Keys → Create Key<br>
@@ -737,7 +739,6 @@
     </div>
     <div id="api-key-status" style="font-size:0.78rem;margin-top:6px;display:none;"></div>
     <div class="modal-footer">
-      <button class="btn-ghost" onclick="closeModal('modal-apikey')">Cancel</button>
       <button class="btn btn-accent" onclick="testAndSaveAPIKey()">Test & Save</button>
     </div>
   </div>
@@ -819,8 +820,7 @@
       <button class="btn btn-blue" onclick="openAddTodo()">+ Add Manually</button>
       <button class="btn-ghost" onclick="clearDone()">Clear Done</button>
     </div>
-    <div class="ai-thinking" id="todo-thinking">
-      <div class="dots"><span></span><span></span><span></span></div> AI is thinking...
+  AI is thinking...
     </div>
   </div>
 
@@ -861,8 +861,7 @@
       <button class="btn btn-accent" onclick="aiGenerateReminder()">⚡ Add Tasks</button>
       <button class="btn btn-blue" onclick="openAddReminder()">+ Add Manually</button>
     </div>
-    <div class="ai-thinking" id="rem-thinking">
-      <div class="dots"><span></span><span></span><span></span></div> AI is thinking...
+  AI is thinking...
     </div>
   </div>
 
@@ -903,8 +902,7 @@
       <button class="btn btn-accent" onclick="aiSaveNote()">💾 Save Note</button>
       <button class="btn btn-blue" onclick="openAddNote()">+ Add Manually</button>
     </div>
-    <div class="ai-thinking" id="note-thinking">
-      <div class="dots"><span></span><span></span><span></span></div> AI is processing note...
+  AI is processing note...
     </div>
   </div>
 
@@ -959,64 +957,46 @@
     </div>
 
     <div class="panel">
-      <div class="panel-title">🤖 AI Compose</div>
-      <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;">
-        <div style="flex:1;">
-          <input class="form-input" id="wa-contact-name" placeholder="To: Name or pick contact above" style="margin-bottom:8px;" oninput="filterContactPicker(this.value)" />
-          <div class="ai-input-box" style="margin-bottom:0;flex-direction:column;">
-            <textarea id="wa-ai-prompt" placeholder="What to say? e.g. 'Payment reminder ₹45000 due today, ask politely when they will pay'" style="min-height:55px;"></textarea>
-          </div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:center;">
-          <button class="mic-btn" id="mic-wa" onclick="startVoice('wa-ai-prompt','mic-wa','mic-wa-label')">🎤</button>
-          <div class="voice-label" id="mic-wa-label">Tap</div>
-        </div>
+      <div class="panel-title">💬 Write Message</div>
+
+      <!-- Contact picker chips -->
+      <div id="wa-contact-picker" style="margin-bottom:10px;display:none;">
+        <div style="font-size:0.72rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;">Quick Pick</div>
+        <div id="wa-contact-chips" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
       </div>
+
+      <input class="form-input" id="wa-contact-name" placeholder="To: Contact name" style="margin-bottom:8px;" oninput="filterContactPicker(this.value)" />
+      <input class="form-input" id="wa-phone" placeholder="WhatsApp number: 919876543210" style="margin-bottom:8px;" />
+
+      <!-- Message box — type yourself or use template -->
+      <div class="ai-input-box" style="flex-direction:column;margin-bottom:10px;">
+        <textarea id="wa-ai-prompt" placeholder="Type your message here... or pick a template below ⬇️" style="min-height:80px;"></textarea>
+      </div>
+
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-accent" onclick="aiComposeWA()">⚡ Add Reminder</button>
-        <button class="btn-ghost" onclick="clearWACompose()">Clear</button>
+        <button class="btn wa-btn-send" onclick="sendWANow()">📲 Open WhatsApp</button>
+        <button class="btn-ghost btn-sm" onclick="openPickContact()">👥 Pick Contact</button>
+        <button class="btn-ghost btn-sm" onclick="copyWAMessage()">📋 Copy</button>
+        <button class="btn-ghost btn-sm" onclick="clearWACompose()">✕ Clear</button>
       </div>
-      <div class="ai-thinking" id="wa-thinking">
-        <div class="dots"><span></span><span></span><span></span></div> AI writing...
-      </div>
-    </div>
 
-    <!-- Message preview + send -->
-    <div id="wa-compose-area" style="display:none;">
-      <div class="panel" style="border-color:#25d366;">
-        <div class="panel-title" style="color:#25d366;">💬 Message</div>
-        <div class="wa-bubble" id="wa-preview-text"></div>
-        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
-          <button class="btn-ghost btn-sm" onclick="editWAMessage()">✏️ Edit</button>
-          <button class="btn-ghost btn-sm" onclick="aiRewriteWA('shorter')">↓ Short</button>
-          <button class="btn-ghost btn-sm" onclick="aiRewriteWA('more formal')">🎩 Formal</button>
-          <button class="btn-ghost btn-sm" onclick="aiRewriteWA('friendlier')">😊 Friendly</button>
-          <button class="btn-ghost btn-sm" onclick="copyWAMessage()">📋 Copy</button>
-        </div>
-      </div>
-      <div id="wa-edit-area" style="display:none;" class="panel">
-        <div class="panel-title">✏️ Edit</div>
-        <textarea class="form-textarea" id="wa-edit-text" style="min-height:100px;width:100%;"></textarea>
-        <div style="display:flex;gap:8px;margin-top:10px;">
-          <button class="btn btn-accent" onclick="applyWAEdit()">Apply</button>
-          <button class="btn-ghost" onclick="cancelWAEdit()">Cancel</button>
+      <!-- Quick templates row -->
+      <div style="margin-top:12px;">
+        <div style="font-size:0.72rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">⚡ Quick Templates</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="wa-quick-tpl" onclick="applyQuickTemplate('payment')">💰 Payment</button>
+          <button class="wa-quick-tpl" onclick="applyQuickTemplate('followup')">🔄 Follow-up</button>
+          <button class="wa-quick-tpl" onclick="applyQuickTemplate('order')">📦 Order</button>
+          <button class="wa-quick-tpl" onclick="applyQuickTemplate('delivery')">🚚 Delivery</button>
+          <button class="wa-quick-tpl" onclick="applyQuickTemplate('greeting')">👋 Greeting</button>
         </div>
       </div>
 
-      <!-- Send panel -->
-      <div class="panel">
-        <div class="panel-title">📤 Send To</div>
-        <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
-          <input class="form-input" id="wa-phone" placeholder="Number: 919876543210" style="flex:1;" />
-          <button class="btn-ghost btn-sm" onclick="openPickContact()">👥 Pick</button>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn wa-btn-send" onclick="sendWANow()">📲 Open WhatsApp</button>
-          <button class="btn wa-btn-schedule" onclick="openScheduleWA()">⏰ Schedule</button>
-        </div>
-        <div id="wa-schedule-area" style="display:none;margin-top:12px;">
-          <div class="divider"></div>
-          <div class="form-row" style="margin-top:12px;margin-bottom:10px;">
+      <!-- Schedule -->
+      <div style="margin-top:10px;">
+        <button class="btn-ghost btn-sm" onclick="openScheduleWA()" style="width:100%;">⏰ Schedule for Later</button>
+        <div id="wa-schedule-area" style="display:none;margin-top:10px;">
+          <div class="form-row">
             <div class="form-group">
               <label class="form-label">📅 Date</label>
               <input class="form-input" id="wa-sched-date" type="date" />
@@ -1026,8 +1006,8 @@
               <input class="form-input" id="wa-sched-time" type="time" />
             </div>
           </div>
-          <div class="wa-schedule-info">At scheduled time WhatsApp opens with message pre-filled — just tap Send once.</div>
-          <button class="btn btn-accent" style="margin-top:10px;width:100%;" onclick="scheduleWASend()">⏰ Schedule</button>
+          <div class="wa-schedule-info" style="margin-top:8px;">At this time WhatsApp opens with message ready — just tap Send.</div>
+          <button class="btn btn-accent" style="margin-top:8px;width:100%;" onclick="scheduleWASend()">⏰ Schedule Send</button>
         </div>
       </div>
     </div>
@@ -1553,8 +1533,6 @@ function save() {
 }
 
 // ============================================================
-// CLAUDE API CALL — works on Claude.ai AND GitHub Pages
-// ============================================================
 const IS_CLAUDE_AI = window.location.hostname.includes('claude.ai')
   || window.location.protocol === 'file:'
   || window.location.hostname === 'localhost';
@@ -1581,12 +1559,7 @@ async function callClaude(systemPrompt, userMsg) {
       });
     } else {
       // GitHub Pages — need API key + CORS proxy
-      const apiKey = localStorage.getItem('rickey_claude_key') || '';
-      if (!apiKey) {
-        clearTimeout(timeout);
-        showToast('⚠️ Tap 🔑 to add your Claude API key!');
-        throw new Error('No API key');
-      }
+      // Gmail AI writing disabled — no API key needed
       // corsproxy.io — reliable free CORS proxy
       res = await fetch("https://corsproxy.io/?https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -1936,7 +1909,8 @@ function sendReminderWA(id) {
 function addReminderToCalendar(id) {
   const r = reminders.find(x => x.id === id);
   if (!r) return;
-  const title = encodeURIComponent((r.type==='payment'?'💰 Pay: ':'r.type==='sales'?'📦 Sales: ':'📞 Call: ')+r.name+(r.amount?' ₹'+r.amount:''));
+  const prefix = r.type==='payment'?'💰 Pay: ':r.type==='sales'?'📦 Sales: ':'📞 Call: ';
+  const title = encodeURIComponent(prefix+r.name+(r.amount?' ₹'+r.amount:''));
   const details = encodeURIComponent(r.note || '');
   let dates = '';
   if (r.dueDate) {
@@ -2476,85 +2450,57 @@ function renderTemplates() {
 }
 
 // ============================================================
-// WHATSAPP SYSTEM
+// WHATSAPP SYSTEM — No API needed, type yourself
 // ============================================================
 let waScheduled = JSON.parse(localStorage.getItem('rickey_wa_scheduled') || '[]');
-let waCurrentMsg = '';
 let waScheduleTimers = {};
 
 function saveWAScheduled() { localStorage.setItem('rickey_wa_scheduled', JSON.stringify(waScheduled)); }
 
-// AI compose message
-async function aiComposeWA() {
-  const prompt = document.getElementById('wa-ai-prompt').value.trim();
-  const name = document.getElementById('wa-contact-name').value.trim();
-  if (!prompt) { showToast('Describe what to say first'); return; }
-  document.getElementById('wa-thinking').classList.add('show');
-  document.getElementById('wa-compose-area').style.display = 'none';
-
-  try {
-    const sys = `You are a WhatsApp message writer for a business owner named Rickey.
-Write a professional yet friendly WhatsApp message in a natural, conversational tone.
-Keep it concise (2-4 sentences usually). Use Indian business context.
-${name ? `The message is to: ${name}.` : ''}
-Return ONLY the message text — no quotes, no explanation, no subject line.`;
-
-    const raw = await callClaude(sys, prompt);
-    waCurrentMsg = raw.trim();
-    document.getElementById('wa-preview-text').textContent = waCurrentMsg;
-    document.getElementById('wa-compose-area').style.display = 'block';
-    document.getElementById('wa-edit-area').style.display = 'none';
-    document.getElementById('wa-schedule-area').style.display = 'none';
-  } catch(e) {
-    showToast('AI error — try again');
-  }
-  document.getElementById('wa-thinking').classList.remove('show');
+// Get current message from textarea
+function getCurrentMsg() {
+  return document.getElementById('wa-ai-prompt').value.trim();
 }
 
-async function aiRewriteWA(instruction) {
-  if (!waCurrentMsg) return;
-  document.getElementById('wa-thinking').classList.add('show');
-  try {
-    const sys = `Rewrite this WhatsApp message to be ${instruction}. Return ONLY the new message, no explanation.`;
-    waCurrentMsg = (await callClaude(sys, waCurrentMsg)).trim();
-    document.getElementById('wa-preview-text').textContent = waCurrentMsg;
-  } catch(e) { showToast('AI error'); }
-  document.getElementById('wa-thinking').classList.remove('show');
+// Quick templates — fill textarea instantly
+const quickTemplates = {
+  payment:  (name) => `Hello ${name||'there'}, this is a gentle reminder that your payment is due. Kindly arrange at your earliest convenience. Thank you 🙏`,
+  followup: (name) => `Hello ${name||'there'}, hope you are doing well! Just following up on our last discussion. Please let me know if you have any requirements. Thank you 🙏`,
+  order:    (name) => `Hello ${name||'there'}, your order has been confirmed and is being processed. We will update you shortly. Thank you for your business! 😊`,
+  delivery: (name) => `Hello ${name||'there'}, your order is ready and will be delivered soon. Please keep your number active for our delivery team. Thank you 🙏`,
+  greeting: (name) => `Hello ${name||'there'}, hope you and your family are doing well! Thank you for your continued trust and support. We look forward to serving you again! 😊`,
+};
+
+function applyQuickTemplate(type) {
+  const name = document.getElementById('wa-contact-name').value.trim();
+  const msg = quickTemplates[type] ? quickTemplates[type](name) : '';
+  document.getElementById('wa-ai-prompt').value = msg;
+  showToast('⚡ Template applied — edit if needed!');
 }
 
 function clearWACompose() {
   document.getElementById('wa-ai-prompt').value = '';
   document.getElementById('wa-contact-name').value = '';
-  document.getElementById('wa-compose-area').style.display = 'none';
-  document.getElementById('wa-edit-area').style.display = 'none';
-  waCurrentMsg = '';
+  document.getElementById('wa-phone').value = '';
+  document.getElementById('wa-schedule-area').style.display = 'none';
 }
-
-function editWAMessage() {
-  document.getElementById('wa-edit-text').value = waCurrentMsg;
-  document.getElementById('wa-edit-area').style.display = 'block';
-}
-function applyWAEdit() {
-  waCurrentMsg = document.getElementById('wa-edit-text').value.trim();
-  document.getElementById('wa-preview-text').textContent = waCurrentMsg;
-  document.getElementById('wa-edit-area').style.display = 'none';
-}
-function cancelWAEdit() { document.getElementById('wa-edit-area').style.display = 'none'; }
 
 function copyWAMessage() {
-  navigator.clipboard.writeText(waCurrentMsg).then(() => showToast('📋 Copied!'));
+  const msg = getCurrentMsg();
+  if (!msg) { showToast('Type a message first'); return; }
+  navigator.clipboard.writeText(msg).then(() => showToast('📋 Copied!'));
 }
 
 function buildWAUrl(phone, msg) {
-  const clean = phone.replace(/\D/g, '');
-  return `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`;
+  return `https://wa.me/${phone.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`;
 }
 
 function sendWANow() {
   const phone = document.getElementById('wa-phone').value.trim();
-  if (!phone) { showToast('Enter WhatsApp number first'); return; }
-  if (!waCurrentMsg) { showToast('Compose a message first'); return; }
-  window.open(buildWAUrl(phone, waCurrentMsg), '_blank');
+  const msg   = getCurrentMsg();
+  if (!phone) { showToast('Enter WhatsApp number'); return; }
+  if (!msg)   { showToast('Type a message first'); return; }
+  window.open(buildWAUrl(phone, msg), '_blank');
 }
 
 function openScheduleWA() {
@@ -2562,7 +2508,6 @@ function openScheduleWA() {
   const showing = area.style.display !== 'none';
   area.style.display = showing ? 'none' : 'block';
   if (!showing) {
-    // default to now + 1 hour
     const d = new Date(Date.now() + 3600000);
     document.getElementById('wa-sched-date').value = d.toISOString().split('T')[0];
     document.getElementById('wa-sched-time').value = d.toTimeString().slice(0,5);
@@ -2571,43 +2516,32 @@ function openScheduleWA() {
 
 function scheduleWASend() {
   const phone = document.getElementById('wa-phone').value.trim();
-  const date = document.getElementById('wa-sched-date').value;
-  const time = document.getElementById('wa-sched-time').value;
-  const name = document.getElementById('wa-contact-name').value.trim();
+  const date  = document.getElementById('wa-sched-date').value;
+  const time  = document.getElementById('wa-sched-time').value;
+  const name  = document.getElementById('wa-contact-name').value.trim();
+  const msg   = getCurrentMsg();
 
   if (!phone) { showToast('Enter WhatsApp number'); return; }
   if (!date || !time) { showToast('Pick date and time'); return; }
-  if (!waCurrentMsg) { showToast('Compose a message first'); return; }
+  if (!msg) { showToast('Type a message first'); return; }
 
   const sendAt = new Date(date + 'T' + time).getTime();
   if (sendAt <= Date.now()) { showToast('Pick a future time'); return; }
 
-  const entry = {
-    id: uid(),
-    phone, name: name || phone,
-    message: waCurrentMsg,
-    sendAt,
-    created: new Date().toISOString(),
-    fired: false
-  };
-
+  const entry = { id: uid(), phone, name: name || phone, message: msg, sendAt, created: new Date().toISOString(), fired: false };
   waScheduled.unshift(entry);
   saveWAScheduled();
   scheduleTimer(entry);
   renderWAScheduled();
   showToast(`⏰ Scheduled for ${formatTime12(time)} on ${new Date(sendAt).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}`);
   document.getElementById('wa-schedule-area').style.display = 'none';
-
-  // Request notification permission safely
   if (typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission();
 }
 
 function scheduleTimer(entry) {
   const delay = entry.sendAt - Date.now();
   if (delay <= 0 || entry.fired) return;
-  waScheduleTimers[entry.id] = setTimeout(() => {
-    fireScheduled(entry.id);
-  }, delay);
+  waScheduleTimers[entry.id] = setTimeout(() => fireScheduled(entry.id), delay);
 }
 
 function fireScheduled(id) {
@@ -2819,16 +2753,7 @@ function clearAllData() {
 }
 
 // ============================================================
-// API KEY SETUP
-// ============================================================
-function openAPIKeySetup() {
-  const saved = localStorage.getItem('rickey_claude_key') || '';
-  document.getElementById('claude-api-key-input').value = saved ? '••••••••••••••••' : '';
-  document.getElementById('api-key-status').style.display = 'none';
-  document.getElementById('modal-apikey').classList.add('show');
-}
-
-async function testAndSaveAPIKey() {
+function testAndSaveAPIKey() {
   const input = document.getElementById('claude-api-key-input').value.trim();
   const status = document.getElementById('api-key-status');
   if (!input || input.startsWith('•')) {
@@ -2879,32 +2804,6 @@ async function testAndSaveAPIKey() {
   }
 }
 
-function updateAIStatus(active) {
-  const dot = document.getElementById('ai-status-dot');
-  if (dot) {
-    dot.style.background = active ? 'var(--accent)' : '#dc2626';
-    dot.style.boxShadow = active ? '0 0 8px var(--accent)' : '0 0 8px #dc2626';
-    dot.title = active ? 'AI Active' : 'API Key needed';
-  }
-}
-
-function checkAPIKeyOnLoad() {
-  const key = localStorage.getItem('rickey_claude_key');
-  if (key) {
-    updateAIStatus(true);
-    document.getElementById('api-key-btn').style.background = 'rgba(52,168,83,0.1)';
-    document.getElementById('api-key-btn').style.borderColor = 'rgba(52,168,83,0.3)';
-    document.getElementById('api-key-btn').style.color = '#34a853';
-    document.getElementById('api-key-btn').textContent = '🔑 AI Ready';
-  } else {
-    updateAIStatus(false);
-    // Auto open API key modal after 1 second if no key
-    setTimeout(() => {
-      showToast('⚠️ Add your Claude API key to use AI features');
-    }, 1000);
-  }
-}
-
 // ============================================================
 // INIT
 // ============================================================
@@ -2918,7 +2817,6 @@ renderMemoryDB();
 initTemplates();
 renderContactPicker();
 initGoogleTab();
-checkAPIKeyOnLoad();
 if (typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission();
 
 // Wire VCF import
