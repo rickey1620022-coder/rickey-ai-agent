@@ -1553,43 +1553,64 @@ function save() {
 }
 
 // ============================================================
-// CLAUDE API CALL — with proper headers + timeout
+// CLAUDE API CALL — works on Claude.ai AND GitHub Pages
 // ============================================================
+const IS_CLAUDE_AI = window.location.hostname.includes('claude.ai')
+  || window.location.protocol === 'file:'
+  || window.location.hostname === 'localhost';
+
 async function callClaude(systemPrompt, userMsg) {
-  const apiKey = localStorage.getItem('rickey_claude_key') || '';
-  if (!apiKey) {
-    showToast('⚠️ Add your Claude API key in Settings');
-    throw new Error('No API key set');
-  }
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000);
+  const timeout = setTimeout(() => controller.abort(), 45000);
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-request-headers": "true"
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userMsg }]
-      })
+    let res;
+    const body = JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1000,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userMsg }]
     });
+
+    if (IS_CLAUDE_AI) {
+      // Inside Claude.ai — direct call works, no key needed
+      res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body
+      });
+    } else {
+      // GitHub Pages — need API key + CORS proxy
+      const apiKey = localStorage.getItem('rickey_claude_key') || '';
+      if (!apiKey) {
+        clearTimeout(timeout);
+        showToast('⚠️ Tap 🔑 to add your Claude API key!');
+        throw new Error('No API key');
+      }
+      // corsproxy.io — reliable free CORS proxy
+      res = await fetch("https://corsproxy.io/?https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01"
+        },
+        signal: controller.signal,
+        body
+      });
+    }
+
     clearTimeout(timeout);
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error?.message || 'API error ' + res.status);
+      if (res.status === 401) showToast('❌ Wrong API key — tap 🔑 to fix');
+      throw new Error(err.error?.message || 'Error ' + res.status);
     }
     const data = await res.json();
     return data.content?.map(b => b.text || "").join("") || "";
   } catch(e) {
     clearTimeout(timeout);
-    if (e.name === 'AbortError') throw new Error('Timed out — check internet');
+    if (e.name === 'AbortError') throw new Error('⏱️ Timed out — slow internet?');
     throw e;
   }
 }
@@ -2721,13 +2742,12 @@ async function testAndSaveAPIKey() {
   status.style.color = 'var(--muted)';
   status.textContent = '⏳ Testing key...';
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await fetch("https://corsproxy.io/?https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "x-api-key": input,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-request-headers": "true"
+        "anthropic-version": "2023-06-01"
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
