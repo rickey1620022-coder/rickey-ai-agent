@@ -82,28 +82,42 @@
   }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
+  /* Rates bar (centered, above tabs) */
+  .rates-bar {
+    max-width: 960px; margin: 0 auto;
+    padding: 14px 24px 0;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .rate-links { display: flex; gap: 8px; flex-wrap: wrap; }
+
   /* Nav tabs */
   .nav {
-    display: flex; gap: 4px;
-    padding: 16px 24px 0;
+    display: flex; gap: 8px;
+    max-width: 960px; margin: 0 auto;
+    padding: 18px 24px 14px;
     position: relative; z-index: 1;
+    border-bottom: 2px solid var(--border);
+    flex-wrap: wrap;
   }
   .nav-btn {
-    padding: 10px 20px;
-    border: 1px solid var(--border);
+    padding: 10px 18px;
+    border: 1.5px solid var(--border);
     background: var(--surface);
     color: var(--muted);
-    border-radius: 10px 10px 0 0;
+    border-radius: 10px;
     font-family: 'Syne', sans-serif;
-    font-weight: 600; font-size: 0.82rem;
+    font-weight: 700; font-size: 0.82rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.18s;
     display: flex; align-items: center; gap: 8px;
     letter-spacing: 0.3px;
-    border-bottom: none;
   }
-  .nav-btn:hover { color: var(--text); background: var(--surface2); }
-  .nav-btn.active { color: var(--text); background: var(--surface2); border-color: var(--accent); }
+  .nav-btn:hover { color: var(--text); background: var(--surface2); border-color: var(--muted); }
+  .nav-btn.active {
+    color: #fff; background: var(--accent); border-color: var(--accent);
+    box-shadow: 0 4px 12px rgba(124,58,237,0.25);
+  }
+  .nav-btn.active .badge { background: rgba(255,255,255,0.25); }
   .nav-btn .icon { font-size: 1rem; }
   .badge {
     background: var(--accent3);
@@ -118,7 +132,7 @@
   main {
     position: relative; z-index: 1;
     max-width: 960px; margin: 0 auto;
-    padding: 0 24px 40px;
+    padding: 22px 24px 48px;
   }
 
   .tab { display: none; }
@@ -128,16 +142,16 @@
   /* Panel */
   .panel {
     background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 0 var(--radius) var(--radius) var(--radius);
-    padding: 24px;
-    margin-bottom: 20px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    margin-bottom: 18px;
   }
   .panel-title {
     font-family: 'Syne', sans-serif;
-    font-weight: 700; font-size: 0.85rem;
-    letter-spacing: 1px; text-transform: uppercase;
-    color: var(--muted); margin-bottom: 16px;
+    font-weight: 800; font-size: 1rem;
+    letter-spacing: 0.3px;
+    color: var(--text); margin-bottom: 16px;
   }
 
   /* AI Input */
@@ -719,15 +733,17 @@
   }
 
   @media(max-width: 700px) {
+    .rates-bar { padding: 12px 14px 0; }
     .nav {
       flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
-      padding: 12px 12px 0; gap: 6px; scrollbar-width: none;
+      padding: 14px 14px 12px; gap: 7px; scrollbar-width: none;
     }
     .nav::-webkit-scrollbar { display: none; }
     .nav-btn { flex: 0 0 auto; white-space: nowrap; padding: 9px 14px; font-size: 0.78rem; }
     main {
+      padding-top: 18px;
       padding-bottom: calc(24px + env(safe-area-inset-bottom));
-      padding-left: 12px; padding-right: 12px;
+      padding-left: 14px; padding-right: 14px;
     }
     .panel { padding: 14px 12px; border-radius: 12px; }
     .photo-grid { grid-template-columns: repeat(auto-fill, minmax(100px,1fr)); }
@@ -749,7 +765,7 @@
 <header class="header">
   <div>
     <div class="header-title">RICKEY <span>AI</span> AGENT</div>
-    <div id="app-version-line" style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v2.9.1</div>
+    <div id="app-version-line" style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v2.9.2</div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
     <button id="api-key-btn" onclick="openAPIKey()" style="display:flex;align-items:center;gap:6px;background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;">
@@ -783,27 +799,30 @@
   </div>
 </div>
 
-<!-- ===== NALCO ALUMINIUM RATE (above tabs; hidden unless it loads) ===== -->
-<div id="nalco-card" style="display:none;margin:0 16px 0;padding:10px 14px;border-radius:12px;background:linear-gradient(135deg, rgba(124,58,237,0.12), rgba(37,99,235,0.07));border:1px solid rgba(124,58,237,0.25);">
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-    <div id="nalco-block" style="display:none;align-items:center;gap:8px;">
-      <span style="font-size:1.4rem;">🏭</span>
-      <div>
-        <span style="font-size:0.6rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;">NALCO Aluminium Ingot</span>
-        <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
-          <span id="nalco-price" style="font-size:1.3rem;font-weight:800;font-family:'Syne',sans-serif;color:var(--accent);line-height:1.1;">—</span>
+<!-- ===== RATES BAR (centered, above tabs) ===== -->
+<div class="rates-bar">
+  <!-- NALCO ALUMINIUM RATE (hidden unless it loads) -->
+  <div id="nalco-card" style="display:none;padding:12px 16px;border-radius:12px;background:linear-gradient(135deg, rgba(124,58,237,0.12), rgba(37,99,235,0.07));border:1.5px solid rgba(124,58,237,0.28);">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+      <div id="nalco-block" style="display:none;align-items:center;gap:10px;">
+        <span style="font-size:1.5rem;">🏭</span>
+        <div>
+          <span style="font-size:0.62rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;">NALCO Aluminium Ingot</span>
+          <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
+            <span id="nalco-price" style="font-size:1.4rem;font-weight:800;font-family:'Syne',sans-serif;color:var(--accent);line-height:1.1;">—</span>
+          </div>
+          <div id="nalco-meta" style="font-size:0.64rem;color:var(--muted);"></div>
         </div>
-        <div id="nalco-meta" style="font-size:0.62rem;color:var(--muted);"></div>
       </div>
+      <button class="btn-ghost btn-sm" onclick="loadRates(true)" title="Refresh rate" style="font-size:0.68rem;padding:5px 10px;">↻</button>
     </div>
-    <button class="btn-ghost btn-sm" onclick="loadRates(true)" title="Refresh rate" style="font-size:0.68rem;padding:4px 8px;">↻</button>
   </div>
-</div>
 
-<!-- Always-visible quick links to live Delhi market rates (open the real sites) -->
-<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 16px 0;">
-  <a href="https://shreemetalprices.com/delhi-scrap-prices-today/" target="_blank" rel="noopener" class="rate-link-btn">📍 Delhi rates (Shree)</a>
-  <a href="https://www.metalmandi.in/scrap-rate" target="_blank" rel="noopener" class="rate-link-btn">📊 MetalMandi</a>
+  <!-- Always-visible quick links to live Delhi market rates -->
+  <div class="rate-links">
+    <a href="https://shreemetalprices.com/delhi-scrap-prices-today/" target="_blank" rel="noopener" class="rate-link-btn">📍 Delhi rates (Shree)</a>
+    <a href="https://www.metalmandi.in/scrap-rate" target="_blank" rel="noopener" class="rate-link-btn">📊 MetalMandi</a>
+  </div>
 </div>
 
 <nav class="nav">
@@ -3284,8 +3303,8 @@ function showRates(data) {
 // INIT
 // ============================================================
 // App version + build stamp (shown small under the title)
-const APP_VERSION = 'v2.9.1';
-const APP_BUILD = '2026-06-01 22:10 IST';
+const APP_VERSION = 'v2.9.2';
+const APP_BUILD = '2026-06-01 23:00 IST';
 (function showVersion(){
   const el = document.getElementById('app-version-line');
   if (el) el.textContent = APP_VERSION + ' • ' + APP_BUILD;
