@@ -739,7 +739,7 @@
 <header class="header">
   <div>
     <div class="header-title">RICKEY <span>AI</span> AGENT</div>
-    <div id="app-version-line" style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v2.4.2</div>
+    <div id="app-version-line" style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v2.5.0</div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
     <button id="api-key-btn" onclick="openAPIKey()" style="display:flex;align-items:center;gap:6px;background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;">
@@ -1127,16 +1127,29 @@
     <div id="db-keys-list" style="display:flex;flex-direction:column;gap:6px;"></div>
   </div>
 
+  <!-- Google Drive backup (free, your own Drive, syncs across your phones) -->
+  <div class="panel" style="margin-bottom:16px;">
+    <div class="panel-title">☁️ Google Drive Backup</div>
+    <div style="font-size:0.8rem;color:var(--muted);line-height:1.6;margin-bottom:12px;">
+      Save a backup of everything to your own Google Drive, then restore it on any of your phones. Free, private, and you control the file.
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn g-btn-blue" onclick="backupToDrive()">☁️ Backup to Drive</button>
+      <button class="btn-ghost" onclick="restoreFromDrive()">⬇️ Restore from Drive</button>
+    </div>
+    <div id="g-drive-status" style="font-size:0.78rem;margin-top:8px;display:none;"></div>
+  </div>
+
   <!-- Export / Import / Backup -->
   <div class="panel" style="margin-bottom:16px;">
-    <div class="panel-title">💾 Backup & Restore</div>
+    <div class="panel-title">💾 Backup to a File</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
       <button class="btn btn-accent" onclick="exportAllData()">⬇️ Export All (JSON)</button>
       <button class="btn btn-blue" onclick="document.getElementById('db-import-file').click()">⬆️ Import Backup</button>
       <input type="file" id="db-import-file" accept=".json" style="display:none;" />
     </div>
     <div style="font-size:0.75rem;color:var(--muted);line-height:1.6;">
-      Export saves everything (tasks, reminders, notes, photos, WA messages) as a JSON file to your device. Import restores from that file. Use this to back up before clearing browser data.
+      Export saves everything (tasks, reminders, notes, contacts, photos, WhatsApp messages) as a JSON file to your device. Import restores from that file. Use this to back up before clearing browser data.
     </div>
   </div>
 
@@ -1187,7 +1200,7 @@
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
       <div class="g-step-row"><span class="g-step-num">1</span><div>Go to <a href="https://console.cloud.google.com" target="_blank" class="g-link">console.cloud.google.com</a> → Sign in with your Google account</div></div>
       <div class="g-step-row"><span class="g-step-num">2</span><div>Click <strong>Select Project</strong> → <strong>New Project</strong> → Name it "Rickey AI" → Create</div></div>
-      <div class="g-step-row"><span class="g-step-num">3</span><div><strong>APIs & Services</strong> → <strong>Enable APIs</strong> → Enable: <em>Google People API</em>, <em>Google Calendar API</em>, <em>Tasks API</em>, <em>Gmail API</em></div></div>
+      <div class="g-step-row"><span class="g-step-num">3</span><div><strong>APIs & Services</strong> → <strong>Enable APIs</strong> → Enable: <em>Google People API</em>, <em>Google Calendar API</em>, <em>Tasks API</em>, <em>Gmail API</em>, <em>Google Drive API</em></div></div>
       <div class="g-step-row"><span class="g-step-num">4</span><div><strong>APIs & Services</strong> → <strong>OAuth consent screen</strong> → External → Fill app name "Rickey AI" → Add your email → Save</div></div>
       <div class="g-step-row"><span class="g-step-num">5</span><div><strong>Credentials</strong> → <strong>+ Create Credentials</strong> → <strong>OAuth Client ID</strong> → Type: <strong>Web application</strong></div></div>
       <div class="g-step-row"><span class="g-step-num">6</span><div>Under <strong>Authorised JavaScript origins</strong> add: <code id="g-origin-code" class="g-code">loading...</code> <button class="btn-ghost btn-sm" onclick="copyOrigin()">Copy</button></div></div>
@@ -1531,6 +1544,14 @@ let gTokenClient = null;
 let gAccessToken = localStorage.getItem('g_access_token') || '';
 let gClientId    = localStorage.getItem('g_client_id') || '862446986268-6gmciu3vhhv50udesorlf6ke5n2pbeoq.apps.googleusercontent.com';
 let gEmailBody   = '';
+const GSCOPES = [
+  'https://www.googleapis.com/auth/contacts.readonly',
+  'https://www.googleapis.com/auth/calendar',
+  'https://www.googleapis.com/auth/tasks',
+  'https://www.googleapis.com/auth/gmail.send',
+  'https://www.googleapis.com/auth/drive.file',
+  'profile','email'
+].join(' ');
 
 function save() {
   localStorage.setItem('rickey_todos', JSON.stringify(todos));
@@ -2880,17 +2901,32 @@ function renderMemoryDB() {
   `).join('');
 }
 
-function exportAllData() {
-  const data = {
+// One place that builds the full backup payload (everything the app stores)
+function buildBackupData() {
+  return {
     exported: new Date().toISOString(),
     app: 'Rickey AI Agent',
-    todos,
-    reminders,
-    notes,
-    photos,
-    waScheduled
+    version: typeof APP_VERSION !== 'undefined' ? APP_VERSION : '',
+    todos, reminders, notes, photos, waScheduled, contacts, templates
   };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+}
+
+// Apply a restored backup object to local storage + memory
+function applyBackupData(data) {
+  if (data.todos)       { todos = data.todos; localStorage.setItem('rickey_todos', JSON.stringify(todos)); }
+  if (data.reminders)   { reminders = data.reminders; localStorage.setItem('rickey_reminders', JSON.stringify(reminders)); }
+  if (data.notes)       { notes = data.notes; localStorage.setItem('rickey_notes', JSON.stringify(notes)); }
+  if (data.photos)      { photos = data.photos; localStorage.setItem('rickey_photos', JSON.stringify(photos)); }
+  if (data.waScheduled) { waScheduled = data.waScheduled; localStorage.setItem('rickey_wa_scheduled', JSON.stringify(waScheduled)); }
+  if (data.contacts)    { contacts = data.contacts; localStorage.setItem('rickey_contacts', JSON.stringify(contacts)); }
+  if (data.templates)   { templates = data.templates; localStorage.setItem('rickey_templates', JSON.stringify(templates)); }
+  renderTodos(); renderReminders(); renderNotes(); renderPhotos(); renderWAScheduled(); renderMemoryDB();
+  if (typeof renderContacts === 'function') renderContacts();
+  if (typeof renderTemplates === 'function') renderTemplates();
+}
+
+function exportAllData() {
+  const blob = new Blob([JSON.stringify(buildBackupData(), null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -2898,6 +2934,91 @@ function exportAllData() {
   a.click();
   URL.revokeObjectURL(url);
   showToast('✅ Backup downloaded!');
+}
+
+// ---- GOOGLE DRIVE BACKUP / RESTORE (free, your own Drive) ----
+const DRIVE_BACKUP_NAME = 'rickey-ai-agent-backup.json';
+
+async function findDriveBackupId() {
+  const q = encodeURIComponent(`name='${DRIVE_BACKUP_NAME}' and trashed=false`);
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&spaces=drive&fields=files(id,modifiedTime)&orderBy=modifiedTime desc`, {
+    headers: { Authorization: 'Bearer ' + gAccessToken }
+  });
+  if (r.status === 401 || r.status === 403) throw new Error('SCOPE');
+  if (!r.ok) throw new Error('Drive error ' + r.status);
+  const d = await r.json();
+  return (d.files && d.files.length) ? d.files[0].id : null;
+}
+
+async function backupToDrive() {
+  if (!gAccessToken) { showToast('🔑 Connect Google first (Google tab)'); return; }
+  const status = document.getElementById('g-drive-status');
+  const set = (m,c) => { if (status){ status.style.display='block'; status.textContent=m; if(c) status.style.color=c; } };
+  set('⏳ Backing up to Google Drive...', 'var(--muted)');
+  showToast('⏳ Backing up to Google Drive...');
+  try {
+    const payload = JSON.stringify(buildBackupData());
+    const existingId = await findDriveBackupId();
+    const metadata = { name: DRIVE_BACKUP_NAME, mimeType: 'application/json' };
+    const boundary = 'rickeyboundary' + Date.now();
+    const body =
+      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n` +
+      JSON.stringify(existingId ? {} : metadata) +
+      `\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n` +
+      payload +
+      `\r\n--${boundary}--`;
+    const url = existingId
+      ? `https://www.googleapis.com/upload/drive/v3/files/${existingId}?uploadType=multipart`
+      : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+    const resp = await fetch(url, {
+      method: existingId ? 'PATCH' : 'POST',
+      headers: { Authorization: 'Bearer ' + gAccessToken, 'Content-Type': 'multipart/related; boundary=' + boundary },
+      body
+    });
+    if (resp.status === 401 || resp.status === 403) throw new Error('SCOPE');
+    if (!resp.ok) throw new Error('Upload failed ' + resp.status);
+    const sizeKB = Math.round(payload.length / 1024);
+    set(`✅ Backed up to Google Drive (${sizeKB} KB) • ${new Date().toLocaleString('en-IN')}`, '#34a853');
+    showToast('✅ Backup saved to your Google Drive');
+    localStorage.setItem('rickey_last_drive_backup', new Date().toISOString());
+  } catch(e) {
+    handleDriveError(e, set);
+  }
+}
+
+async function restoreFromDrive() {
+  if (!gAccessToken) { showToast('🔑 Connect Google first (Google tab)'); return; }
+  const status = document.getElementById('g-drive-status');
+  const set = (m,c) => { if (status){ status.style.display='block'; status.textContent=m; if(c) status.style.color=c; } };
+  set('⏳ Looking for your backup...', 'var(--muted)');
+  try {
+    const id = await findDriveBackupId();
+    if (!id) { set('⚠️ No backup found in Drive yet — tap "Backup to Drive" first', '#d97706'); showToast('No Drive backup found yet'); return; }
+    const r = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`, {
+      headers: { Authorization: 'Bearer ' + gAccessToken }
+    });
+    if (r.status === 401 || r.status === 403) throw new Error('SCOPE');
+    if (!r.ok) throw new Error('Download failed ' + r.status);
+    const data = await r.json();
+    if (!confirm('This will REPLACE all data on THIS phone with your Google Drive backup. Continue?')) { set('Restore cancelled'); return; }
+    applyBackupData(data);
+    set('✅ Restored from Google Drive backup', '#34a853');
+    showToast('✅ Data restored from Google Drive');
+  } catch(e) {
+    handleDriveError(e, set);
+  }
+}
+
+function handleDriveError(e, set) {
+  let msg;
+  if (e.message === 'SCOPE') {
+    msg = '❌ Drive access not granted. Sign out in the Google tab, reconnect, and allow Drive.';
+    gAccessToken = ''; localStorage.removeItem('g_access_token');
+  } else {
+    msg = '❌ ' + e.message + ' — check internet and try again.';
+  }
+  set(msg, '#dc2626');
+  showToast(msg);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -2909,12 +3030,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const data = JSON.parse(ev.target.result);
         if (!confirm('This will REPLACE all current data. Continue?')) return;
-        if (data.todos)       { todos = data.todos; localStorage.setItem('rickey_todos', JSON.stringify(todos)); }
-        if (data.reminders)   { reminders = data.reminders; localStorage.setItem('rickey_reminders', JSON.stringify(reminders)); }
-        if (data.notes)       { notes = data.notes; localStorage.setItem('rickey_notes', JSON.stringify(notes)); }
-        if (data.photos)      { photos = data.photos; localStorage.setItem('rickey_photos', JSON.stringify(photos)); }
-        if (data.waScheduled) { waScheduled = data.waScheduled; localStorage.setItem('rickey_wa_scheduled', JSON.stringify(waScheduled)); }
-        renderTodos(); renderReminders(); renderNotes(); renderPhotos(); renderWAScheduled(); renderMemoryDB();
+        applyBackupData(data);
         showToast('✅ Data restored from backup!');
       } catch(err) {
         showToast('❌ Invalid backup file');
@@ -3030,8 +3146,8 @@ async function testAndSaveAPIKey() {
 // INIT
 // ============================================================
 // App version + build stamp (shown small under the title)
-const APP_VERSION = 'v2.4.2';
-const APP_BUILD = '2026-06-01 15:10 IST';
+const APP_VERSION = 'v2.5.0';
+const APP_BUILD = '2026-06-01 16:00 IST';
 (function showVersion(){
   const el = document.getElementById('app-version-line');
   if (el) el.textContent = APP_VERSION + ' • ' + APP_BUILD;
@@ -3169,13 +3285,7 @@ function resetMic(btn, label) {
 // ============================================================
 // GOOGLE INTEGRATION
 // ============================================================
-const GSCOPES = [
-  'https://www.googleapis.com/auth/contacts.readonly',
-  'https://www.googleapis.com/auth/calendar',
-  'https://www.googleapis.com/auth/tasks',
-  'https://www.googleapis.com/auth/gmail.send',
-  'profile','email'
-].join(' ');
+// (GSCOPES is defined near the top of the script, before init runs)
 
 function copyOrigin() {
   const origin = window.location.origin;
