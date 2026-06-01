@@ -6,12 +6,12 @@ A smart personal AI business assistant — installable as a mobile app (PWA).
 👉 **https://rickey1620022-coder.github.io/rickey-ai-agent**
 
 ## ✨ Features
-- ✅ **AI To-Do** — speak or type tasks, AI auto-categorises
-- 📞 **Call Reminders** — payment & sales reminders with date/time
+- ✅ **AI To-Do** — speak or type tasks, AI auto-categorises; one-tap **sync to Google Tasks**
+- 📞 **Call Reminders** — payment & sales reminders with date/time; push to **Google Calendar**
 - 📒 **Smart Notes DB** — AI auto-titles, tags and saves notes
-- 📷 **Photo Gallery** — tag photos, search by tag, camera support
-- 💬 **WhatsApp** — AI writes messages, contact book, schedule send
-- 🔗 **Google Integration** — Contacts, Calendar, Gmail
+- 📷 **Photo Gallery** — save photos with a **category** + **tags**; search by category dropdown and/or tag (e.g. pick "payment slip" to see every payment slip)
+- 💬 **WhatsApp** — AI writes messages, contact book, and **schedule send**: at the set time you get a reminder, then tap **Send Now** to open the chat and send manually
+- 🔗 **Google Integration** — Tasks, Contacts, Calendar, Gmail
 - 🗄️ **Memory DB** — backup/restore all data
 
 ## 📱 Install as Mobile App

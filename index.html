@@ -453,6 +453,11 @@
     display: flex; gap: 3px; flex-wrap: wrap;
   }
   .photo-item-tag { font-size: 0.62rem; color: #fff; font-family: 'Syne', sans-serif; font-weight: 600; }
+  .photo-cat-badge {
+    font-size: 0.6rem; color: #fff; font-family: 'Syne', sans-serif; font-weight: 700;
+    background: var(--accent); border-radius: 6px; padding: 1px 5px; margin-right: 3px;
+    white-space: nowrap;
+  }
   .photo-del {
     position: absolute; top: 4px; right: 4px;
     width: 20px; height: 20px; border-radius: 50%;
@@ -526,6 +531,17 @@
     display:flex; gap:12px; align-items:flex-start;
   }
   .wa-sched-item.fired { opacity: 0.45; }
+  .wa-sched-item.due {
+    border-color: #25d366; background: rgba(37,211,102,0.08);
+    box-shadow: 0 0 0 1px #25d366;
+    animation: dueGlow 1.6s ease-in-out infinite;
+  }
+  @keyframes dueGlow { 0%,100%{ box-shadow:0 0 0 1px #25d366; } 50%{ box-shadow:0 0 10px 1px rgba(37,211,102,0.5); } }
+  .wa-send-now {
+    background: #25d366; color: #fff; border: none; font-weight: 700;
+    white-space: nowrap;
+  }
+  .wa-send-now:hover { background: #1fae57; }
   .wa-sched-icon {
     width:36px; height:36px; min-width:36px; border-radius:10px;
     background:#e7fbe6; display:flex; align-items:center;
@@ -718,9 +734,12 @@
 <header class="header">
   <div>
     <div class="header-title">RICKEY <span>AI</span> AGENT</div>
-    <div style="font-size:0.62rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v2.2.0</div>
+    <div style="font-size:0.62rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v2.3.0</div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
+    <button id="api-key-btn" onclick="openAPIKey()" style="display:flex;align-items:center;gap:6px;background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;">
+      🔑 Add AI Key
+    </button>
     <button id="pwa-install-btn" onclick="installPWA()" style="display:none;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;">
       📲 Install App
     </button>
@@ -728,6 +747,10 @@
   </div>
 </header>
 
+<!-- ===== CLAUDE API KEY MODAL ===== -->
+<div class="overlay" id="modal-apikey">
+  <div class="modal">
+    <div class="modal-title">🔑 Claude AI Key</div>
     <div style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.6;">
       Get your free API key from <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent);">console.anthropic.com</a><br>
       → Sign up → API Keys → Create Key<br>
@@ -739,6 +762,7 @@
     </div>
     <div id="api-key-status" style="font-size:0.78rem;margin-top:6px;display:none;"></div>
     <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('modal-apikey')">Cancel</button>
       <button class="btn btn-accent" onclick="testAndSaveAPIKey()">Test & Save</button>
     </div>
   </div>
@@ -820,7 +844,8 @@
       <button class="btn btn-blue" onclick="openAddTodo()">+ Add Manually</button>
       <button class="btn-ghost" onclick="clearDone()">Clear Done</button>
     </div>
-  AI is thinking...
+    <div class="ai-thinking" id="todo-thinking">
+      <div class="dots"><span></span><span></span><span></span></div> AI is thinking...
     </div>
   </div>
 
@@ -861,7 +886,8 @@
       <button class="btn btn-accent" onclick="aiGenerateReminder()">⚡ Add Tasks</button>
       <button class="btn btn-blue" onclick="openAddReminder()">+ Add Manually</button>
     </div>
-  AI is thinking...
+    <div class="ai-thinking" id="rem-thinking">
+      <div class="dots"><span></span><span></span><span></span></div> AI is thinking...
     </div>
   </div>
 
@@ -923,6 +949,20 @@
       <!-- Gallery input — pick from files -->
       <input type="file" id="photo-upload" accept="image/*" multiple style="display:none;" />
     </div>
+
+    <!-- Search: category dropdown + tag text. Both work together (AND), or each alone. -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+      <select class="form-select" id="photo-cat-filter" onchange="renderPhotos()" style="flex:1;min-width:140px;">
+        <option value="all">📁 All Categories</option>
+      </select>
+      <div style="flex:1;min-width:140px;position:relative;">
+        <input class="form-input" id="photo-search" placeholder="🔍 Search by tag..." oninput="renderPhotos()" list="photo-search-tags" autocomplete="off" />
+        <datalist id="photo-search-tags"></datalist>
+      </div>
+      <button class="btn-ghost btn-sm" onclick="clearPhotoSearch()" title="Clear search">✕</button>
+    </div>
+    <div id="photo-result-count" style="font-size:0.74rem;color:var(--muted);margin-bottom:8px;display:none;"></div>
+
     <div class="photo-tag-bar" id="photo-tag-bar">
       <span class="photo-tag-chip active" onclick="filterPhotos('all',this)">All</span>
     </div>
@@ -949,12 +989,6 @@
 
   <!-- ===== COMPOSE ===== -->
   <div class="wa-section" id="was-compose">
-
-    <!-- Quick contact picker -->
-    <div id="wa-contact-picker" style="margin-bottom:12px;display:none;">
-      <div style="font-size:0.75rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:600;margin-bottom:6px;letter-spacing:0.5px;text-transform:uppercase;">Quick Pick Contact</div>
-      <div id="wa-contact-chips" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
-    </div>
 
     <div class="panel">
       <div class="panel-title">💬 Write Message</div>
@@ -1201,7 +1235,7 @@
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
       <div class="g-step-row"><span class="g-step-num">1</span><div>Go to <a href="https://console.cloud.google.com" target="_blank" class="g-link">console.cloud.google.com</a> → Sign in with your Google account</div></div>
       <div class="g-step-row"><span class="g-step-num">2</span><div>Click <strong>Select Project</strong> → <strong>New Project</strong> → Name it "Rickey AI" → Create</div></div>
-      <div class="g-step-row"><span class="g-step-num">3</span><div><strong>APIs & Services</strong> → <strong>Enable APIs</strong> → Enable: <em>Google People API</em>, <em>Google Calendar API</em>, <em>Gmail API</em></div></div>
+      <div class="g-step-row"><span class="g-step-num">3</span><div><strong>APIs & Services</strong> → <strong>Enable APIs</strong> → Enable: <em>Google People API</em>, <em>Google Calendar API</em>, <em>Tasks API</em>, <em>Gmail API</em></div></div>
       <div class="g-step-row"><span class="g-step-num">4</span><div><strong>APIs & Services</strong> → <strong>OAuth consent screen</strong> → External → Fill app name "Rickey AI" → Add your email → Save</div></div>
       <div class="g-step-row"><span class="g-step-num">5</span><div><strong>Credentials</strong> → <strong>+ Create Credentials</strong> → <strong>OAuth Client ID</strong> → Type: <strong>Web application</strong></div></div>
       <div class="g-step-row"><span class="g-step-num">6</span><div>Under <strong>Authorised JavaScript origins</strong> add: <code id="g-origin-code" class="g-code">loading...</code> <button class="btn-ghost btn-sm" onclick="copyOrigin()">Copy</button></div></div>
@@ -1238,10 +1272,20 @@
       <div id="g-contacts-status" style="font-size:0.78rem;margin-top:8px;color:#34a853;display:none;"></div>
     </div>
 
+    <!-- Google Tasks -->
+    <div class="panel" style="margin-bottom:12px;">
+      <div class="panel-title">✅ Google Tasks</div>
+      <div style="font-size:0.82rem;color:var(--muted);margin-bottom:12px;">Sync your To-Do list to Google Tasks so it shows up in Gmail, Calendar and the Google Tasks app on all your devices.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn g-btn-blue" onclick="pushTodosToGoogleTasks()">📤 Sync To-Do List</button>
+      </div>
+      <div id="g-tasks-status" style="font-size:0.78rem;margin-top:8px;color:#34a853;display:none;"></div>
+    </div>
+
     <!-- Google Calendar -->
     <div class="panel" style="margin-bottom:12px;">
       <div class="panel-title">📅 Google Calendar</div>
-      <div style="font-size:0.82rem;color:var(--muted);margin-bottom:12px;">Push your call reminders to Google Calendar so you get alerts on all devices.</div>
+      <div style="font-size:0.82rem;color:var(--muted);margin-bottom:12px;">Push your call reminders to Google Calendar (with date &amp; time) so you get alerts on all devices.</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn g-btn-blue" onclick="pushRemindersToCalendar()">📅 Push All Reminders</button>
         <button class="btn-ghost" onclick="viewCalendarEvents()">👁 View Events</button>
@@ -1471,6 +1515,11 @@
       <img id="photo-preview-img" style="max-height:200px;max-width:100%;object-fit:contain;" />
     </div>
     <div class="form-group">
+      <label class="form-label">Category</label>
+      <input class="form-input" id="photo-cat-input" list="photo-cat-options" placeholder="e.g. payment slip, invoice, delivery note" autocomplete="off" />
+      <datalist id="photo-cat-options"></datalist>
+    </div>
+    <div class="form-group">
       <label class="form-label">Tags (comma separated)</label>
       <input class="form-input" id="photo-tag-input" placeholder="e.g. invoice, client, aluminium, delivery" />
     </div>
@@ -1488,6 +1537,9 @@
 </div>
 
 
+
+<!-- ===== TOAST NOTIFICATION ===== -->
+<div class="toast" id="toast"></div>
 
 <script>
 // ============================================================
@@ -1558,8 +1610,14 @@ async function callClaude(systemPrompt, userMsg) {
         body
       });
     } else {
-      // GitHub Pages — need API key + CORS proxy
-      // Gmail AI writing disabled — no API key needed
+      // GitHub Pages — need a saved API key + CORS proxy
+      const apiKey = localStorage.getItem('rickey_claude_key') || '';
+      if (!apiKey) {
+        clearTimeout(timeout);
+        showToast('🔑 Add your Claude API key first — tap the key button');
+        openAPIKey();
+        throw new Error('No API key set');
+      }
       // corsproxy.io — reliable free CORS proxy
       res = await fetch("https://corsproxy.io/?https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -1595,6 +1653,7 @@ function uid() { return Date.now().toString(36) + Math.random().toString(36).sli
 
 function showToast(msg) {
   const t = document.getElementById('toast');
+  if (!t) { console.log('Toast:', msg); return; }
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
 }
@@ -2041,6 +2100,7 @@ let photos = JSON.parse(localStorage.getItem('rickey_photos') || '[]');
 let pendingPhotoFiles = [];
 let pendingPhotoIndex = 0;
 let activePhotoTag = 'all';
+let activePhotoCat = 'all';
 let pendingImgData = '';
 
 function savePhotos() { localStorage.setItem('rickey_photos', JSON.stringify(photos)); }
@@ -2057,6 +2117,8 @@ function processNextPhoto() {
     pendingImgData = ev.target.result;
     document.getElementById('photo-preview-img').src = pendingImgData;
     document.getElementById('photo-tag-input').value = '';
+    document.getElementById('photo-cat-input').value = '';
+    populateCategoryDatalist();
     document.getElementById('modal-photo-tag').classList.add('show');
   };
   reader.onerror = function() {
@@ -2071,7 +2133,8 @@ function savePhoto() {
   if (!pendingImgData) { showToast('No image data — try again'); return; }
   const tags = document.getElementById('photo-tag-input').value
     .split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
-  photos.unshift({ id: uid(), src: pendingImgData, tags, created: new Date().toISOString() });
+  const category = document.getElementById('photo-cat-input').value.trim().toLowerCase();
+  photos.unshift({ id: uid(), src: pendingImgData, tags, category: category || 'uncategorized', created: new Date().toISOString() });
   savePhotos();
   pendingImgData = '';
   document.getElementById('modal-photo-tag').classList.remove('show');
@@ -2095,8 +2158,41 @@ function deletePhoto(id) {
 function filterPhotos(tag, el) {
   activePhotoTag = tag;
   document.querySelectorAll('.photo-tag-chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
+  if (el) el.classList.add('active');
   renderPhotos();
+}
+
+function clearPhotoSearch() {
+  activePhotoTag = 'all';
+  activePhotoCat = 'all';
+  const s = document.getElementById('photo-search'); if (s) s.value = '';
+  const c = document.getElementById('photo-cat-filter'); if (c) c.value = 'all';
+  renderPhotos();
+}
+
+// Fill the "add photo" category autocomplete with categories already used
+function populateCategoryDatalist() {
+  const dl = document.getElementById('photo-cat-options');
+  if (!dl) return;
+  const cats = [...new Set(photos.map(p => p.category).filter(c => c && c !== 'uncategorized'))].sort();
+  dl.innerHTML = cats.map(c => `<option value="${c}">`).join('');
+}
+
+// Keep the gallery's category dropdown + tag-search suggestions in sync with data
+function syncPhotoFilters() {
+  const sel = document.getElementById('photo-cat-filter');
+  if (sel) {
+    const cats = [...new Set(photos.map(p => p.category || 'uncategorized'))].sort();
+    const current = activePhotoCat;
+    sel.innerHTML = '<option value="all">📁 All Categories</option>'
+      + cats.map(c => `<option value="${c}">${c === 'uncategorized' ? '📁 Uncategorised' : '📁 ' + c} (${photos.filter(p => (p.category||'uncategorized') === c).length})</option>`).join('');
+    sel.value = current;
+  }
+  const dl = document.getElementById('photo-search-tags');
+  if (dl) {
+    const tags = [...new Set(photos.flatMap(p => p.tags || []))].sort();
+    dl.innerHTML = tags.map(t => `<option value="${t}">`).join('');
+  }
 }
 
 function openLightbox(id) {
@@ -2110,25 +2206,75 @@ function closeLightbox() { document.getElementById('lightbox').classList.remove(
 function renderPhotos() {
   const grid = document.getElementById('photo-grid');
   const bar = document.getElementById('photo-tag-bar');
+  if (!grid) return;
 
-  const allTags = [...new Set(photos.flatMap(p => p.tags))].sort();
-  bar.innerHTML = `<span class="photo-tag-chip ${activePhotoTag==='all'?'active':''}" onclick="filterPhotos('all',this)">All</span>`;
-  allTags.forEach(tag => {
-    bar.innerHTML += `<span class="photo-tag-chip ${activePhotoTag===tag?'active':''}" onclick="filterPhotos('${tag}',this)">#${tag}</span>`;
+  // Capture the user's current selection BEFORE syncPhotoFilters rebuilds the options
+  const sel = document.getElementById('photo-cat-filter');
+  if (sel) activePhotoCat = sel.value || 'all';
+  const searchEl = document.getElementById('photo-search');
+  const tagQuery = searchEl ? searchEl.value.trim().toLowerCase() : '';
+
+  // Rebuild dropdown + tag suggestions, restoring the captured selection
+  syncPhotoFilters();
+
+  // Tag chip bar (quick tag filter)
+  if (bar) {
+    const allTags = [...new Set(photos.flatMap(p => p.tags || []))].sort();
+    bar.innerHTML = `<span class="photo-tag-chip ${activePhotoTag==='all'?'active':''}" onclick="filterPhotos('all',this)">All Tags</span>`;
+    allTags.forEach(tag => {
+      bar.innerHTML += `<span class="photo-tag-chip ${activePhotoTag===tag?'active':''}" onclick="filterPhotos('${tag}',this)">#${tag}</span>`;
+    });
+  }
+
+  // ===== TWO-WAY SEARCH =====
+  // 1) Category filter (dropdown). 2) Tag filter (search box + active chip).
+  // Each works alone; together they AND. Category-only shows everything in that category.
+  let filtered = photos.filter(p => {
+    const cat = p.category || 'uncategorized';
+    const catOk = activePhotoCat === 'all' || cat === activePhotoCat;
+
+    const chipOk = activePhotoTag === 'all' || (p.tags || []).includes(activePhotoTag);
+
+    const searchOk = !tagQuery
+      || (p.tags || []).some(t => t.includes(tagQuery))
+      || cat.includes(tagQuery);
+
+    return catOk && chipOk && searchOk;
   });
 
-  const filtered = activePhotoTag === 'all' ? photos : photos.filter(p => p.tags.includes(activePhotoTag));
+  // Result count line
+  const countEl = document.getElementById('photo-result-count');
+  if (countEl) {
+    const filtering = activePhotoCat !== 'all' || activePhotoTag !== 'all' || tagQuery;
+    if (filtering) {
+      countEl.style.display = 'block';
+      const parts = [];
+      if (activePhotoCat !== 'all') parts.push(`category "${activePhotoCat}"`);
+      if (activePhotoTag !== 'all') parts.push(`tag #${activePhotoTag}`);
+      if (tagQuery) parts.push(`"${tagQuery}"`);
+      countEl.textContent = `${filtered.length} photo(s) — ${parts.join(' + ')}`;
+    } else {
+      countEl.style.display = 'none';
+    }
+  }
+
   if (!filtered.length) {
-    grid.innerHTML = `<div class="empty" style="grid-column:1/-1;padding:20px 0;"><div class="big">📷</div>${activePhotoTag==='all'?'Tap + Add Photo to start':'No photos with tag #'+activePhotoTag}</div>`;
+    const msg = (activePhotoCat !== 'all' || activePhotoTag !== 'all' || tagQuery)
+      ? 'No photos match this search'
+      : 'Tap Camera or Gallery to add photos';
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1;padding:20px 0;"><div class="big">📷</div>${msg}</div>`;
     return;
   }
-  grid.innerHTML = filtered.map(p => `
+
+  grid.innerHTML = filtered.map(p => {
+    const cat = p.category && p.category !== 'uncategorized' ? `<span class="photo-cat-badge">📁 ${p.category}</span>` : '';
+    return `
     <div class="photo-item" onclick="openLightbox('${p.id}')">
-      <img src="${p.src}" alt="photo" />
-      <div class="photo-item-tags">${p.tags.map(t=>`<span class="photo-item-tag">#${t}</span>`).join('')}</div>
+      <img src="${p.src}" alt="photo" loading="lazy" />
+      <div class="photo-item-tags">${cat}${(p.tags||[]).map(t=>`<span class="photo-item-tag">#${t}</span>`).join('')}</div>
       <button class="photo-del" onclick="event.stopPropagation();deletePhoto('${p.id}')">✕</button>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 // ============================================================
@@ -2277,8 +2423,9 @@ function useContact(id) {
 
 function sendToContact(id) {
   const c = contacts.find(x => x.id === id); if (!c) return;
-  if (!waCurrentMsg) { showToast('Compose a message first in Compose tab'); return; }
-  window.open(buildWAUrl(c.phone, waCurrentMsg), '_blank');
+  const msg = (document.getElementById('wa-ai-prompt')?.value.trim()) || waCurrentMsg;
+  if (!msg) { showToast('Compose a message first in Compose tab'); return; }
+  window.open(buildWAUrl(c.phone, msg), '_blank');
 }
 
 function renderContacts() {
@@ -2416,8 +2563,7 @@ function useTemplate(id) {
   const name = document.getElementById('wa-contact-name').value || '{name}';
   const msg = t.body.replace(/{name}/g, name).replace(/{amount}/g, '');
   waCurrentMsg = msg;
-  document.getElementById('wa-preview-text').textContent = msg;
-  document.getElementById('wa-compose-area').style.display = 'block';
+  document.getElementById('wa-ai-prompt').value = msg;
   waSubTab('compose', document.querySelectorAll('.wa-subtab')[0]);
   showToast('⚡ Template loaded!');
 }
@@ -2454,12 +2600,14 @@ function renderTemplates() {
 // ============================================================
 let waScheduled = JSON.parse(localStorage.getItem('rickey_wa_scheduled') || '[]');
 let waScheduleTimers = {};
+let waCurrentMsg = '';
 
 function saveWAScheduled() { localStorage.setItem('rickey_wa_scheduled', JSON.stringify(waScheduled)); }
 
 // Get current message from textarea
 function getCurrentMsg() {
-  return document.getElementById('wa-ai-prompt').value.trim();
+  waCurrentMsg = document.getElementById('wa-ai-prompt').value.trim();
+  return waCurrentMsg;
 }
 
 // Quick templates — fill textarea instantly
@@ -2475,6 +2623,7 @@ function applyQuickTemplate(type) {
   const name = document.getElementById('wa-contact-name').value.trim();
   const msg = quickTemplates[type] ? quickTemplates[type](name) : '';
   document.getElementById('wa-ai-prompt').value = msg;
+  waCurrentMsg = msg;
   showToast('⚡ Template applied — edit if needed!');
 }
 
@@ -2540,29 +2689,41 @@ function scheduleWASend() {
 
 function scheduleTimer(entry) {
   const delay = entry.sendAt - Date.now();
-  if (delay <= 0 || entry.fired) return;
-  waScheduleTimers[entry.id] = setTimeout(() => fireScheduled(entry.id), delay);
+  if (entry.fired) return;
+  if (delay <= 0) { markDue(entry.id); return; }
+  waScheduleTimers[entry.id] = setTimeout(() => markDue(entry.id), delay);
 }
 
-function fireScheduled(id) {
+// At the scheduled time: mark as DUE and remind. Do NOT auto-open —
+// the user taps "Send Now" to open WhatsApp and send manually.
+function markDue(id) {
   const entry = waScheduled.find(e => e.id === id);
-  if (!entry || entry.fired) return;
-  entry.fired = true;
+  if (!entry || entry.fired || entry.due) return;
+  entry.due = true;
   saveWAScheduled();
   renderWAScheduled();
 
-  // Show notification
-  const notifTitle = `📲 WhatsApp: Send to ${entry.name}`;
-  const notifBody = entry.message.slice(0, 80) + (entry.message.length > 80 ? '...' : '');
-
+  const notifTitle = `🔔 WhatsApp reminder: ${entry.name}`;
+  const notifBody = 'Tap to open WhatsApp — ' + entry.message.slice(0, 70) + (entry.message.length > 70 ? '...' : '');
   if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-    const n = new Notification(notifTitle, { body: notifBody, icon: '💬' });
-    n.onclick = () => window.open(buildWAUrl(entry.phone, entry.message), '_blank');
+    try {
+      const n = new Notification(notifTitle, { body: notifBody, icon: './icon-192.png', tag: 'wa-' + id, requireInteraction: true });
+      n.onclick = () => { window.focus(); sendScheduledNow(id); };
+    } catch(e) {}
   }
+  showToast(`🔔 Time to message ${entry.name} — open WhatsApp tab`);
+}
 
-  // Also auto-open WhatsApp
+// User taps Send Now → open WhatsApp with the message prefilled, then mark sent.
+function sendScheduledNow(id) {
+  const entry = waScheduled.find(e => e.id === id);
+  if (!entry) return;
   window.open(buildWAUrl(entry.phone, entry.message), '_blank');
-  showToast(`📲 Opening WhatsApp for ${entry.name}`);
+  entry.fired = true;
+  entry.due = false;
+  saveWAScheduled();
+  renderWAScheduled();
+  showToast(`📲 Opened WhatsApp for ${entry.name}`);
 }
 
 function deleteWASched(id) {
@@ -2576,7 +2737,8 @@ function deleteWASched(id) {
 function renderWAScheduled() {
   const list = document.getElementById('wa-scheduled-list');
   const pending = waScheduled.filter(e => !e.fired);
-  document.getElementById('wa-sched-count').textContent = `${pending.length} pending`;
+  const dueCount = waScheduled.filter(e => e.due && !e.fired).length;
+  document.getElementById('wa-sched-count').textContent = `${pending.length} pending` + (dueCount ? ` • ${dueCount} ready` : '');
   document.getElementById('wa-badge').textContent = pending.length;
 
   if (!waScheduled.length) {
@@ -2584,29 +2746,61 @@ function renderWAScheduled() {
     return;
   }
 
-  list.innerHTML = [...waScheduled].sort((a,b) => a.sendAt - b.sendAt).map(e => {
+  // Order: due first, then upcoming by time, then sent
+  const ordered = [...waScheduled].sort((a,b) => {
+    const rank = e => e.fired ? 2 : (e.due ? 0 : 1);
+    if (rank(a) !== rank(b)) return rank(a) - rank(b);
+    return a.sendAt - b.sendAt;
+  });
+
+  list.innerHTML = ordered.map(e => {
     const dt = new Date(e.sendAt);
     const dtStr = dt.toLocaleDateString('en-IN',{day:'numeric',month:'short'}) + ' ' + formatTime12(dt.toTimeString().slice(0,5));
-    const isPast = e.fired;
+    let stateCls = '', timeLine, actionBtn;
+    if (e.fired) {
+      stateCls = 'fired';
+      timeLine = '✅ Sent';
+      actionBtn = `<button class="btn-ghost btn-sm" style="color:#25d366;border-color:#25d366;" onclick="sendScheduledNow('${e.id}')" title="Send again">↻</button>`;
+    } else if (e.due) {
+      stateCls = 'due';
+      timeLine = '🔔 Ready to send now';
+      actionBtn = `<button class="btn btn-sm wa-send-now" onclick="sendScheduledNow('${e.id}')">📲 Send Now</button>`;
+    } else {
+      timeLine = '⏰ ' + dtStr;
+      actionBtn = `<button class="btn-ghost btn-sm" style="color:#25d366;border-color:#25d366;" onclick="sendScheduledNow('${e.id}')" title="Send early">📲</button>`;
+    }
     return `
-    <div class="wa-sched-item ${isPast ? 'fired' : ''}">
-      <div class="wa-sched-icon">💬</div>
+    <div class="wa-sched-item ${stateCls}">
+      <div class="wa-sched-icon">${e.due && !e.fired ? '🔔' : '💬'}</div>
       <div class="wa-sched-body">
         <div class="wa-sched-to">📱 ${e.name || e.phone}</div>
         <div class="wa-sched-msg">${e.message}</div>
-        <div class="wa-sched-time">${isPast ? '✅ Sent' : '⏰ ' + dtStr}</div>
+        <div class="wa-sched-time">${timeLine}</div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:5px;">
-        ${!isPast ? `<button class="btn-ghost btn-sm" style="color:#25d366;border-color:#25d366;" onclick="window.open(buildWAUrl('${e.phone}', waScheduled.find(x=>x.id==='${e.id}').message),'_blank')">📲</button>` : ''}
+      <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;">
+        ${actionBtn}
         <button class="btn-ghost btn-sm" onclick="deleteWASched('${e.id}')" style="border-color:rgba(255,107,107,0.3);color:var(--accent3)">✕</button>
       </div>
     </div>`;
   }).join('');
 }
 
-// Boot scheduled timers on load
+// Boot scheduled timers on load; catch any that came due while the app was closed
 function bootWATimers() {
-  waScheduled.forEach(e => { if (!e.fired) scheduleTimer(e); });
+  waScheduled.forEach(e => {
+    if (e.fired) return;
+    if (e.sendAt <= Date.now()) { e.due = true; }
+    else scheduleTimer(e);
+  });
+  if (waScheduled.some(e => e.due && !e.fired)) { saveWAScheduled(); }
+  renderWAScheduled();
+  // Re-check every 30s in case a timer was throttled while backgrounded
+  setInterval(() => {
+    let changed = false;
+    waScheduled.forEach(e => {
+      if (!e.fired && !e.due && e.sendAt <= Date.now()) { markDue(e.id); changed = true; }
+    });
+  }, 30000);
 }
 
 // ============================================================
@@ -2753,7 +2947,35 @@ function clearAllData() {
 }
 
 // ============================================================
-function testAndSaveAPIKey() {
+// ============================================================
+// API KEY MODAL + AI STATUS
+// ============================================================
+function openAPIKey() {
+  const saved = localStorage.getItem('rickey_claude_key') || '';
+  const input = document.getElementById('claude-api-key-input');
+  if (input && saved) input.value = '••••••••••••••••' + saved.slice(-4);
+  const status = document.getElementById('api-key-status');
+  if (status) status.style.display = 'none';
+  document.getElementById('modal-apikey').classList.add('show');
+}
+
+function updateAIStatus(ready) {
+  const btn = document.getElementById('api-key-btn');
+  if (!btn) return;
+  if (ready) {
+    btn.style.background = 'rgba(52,168,83,0.1)';
+    btn.style.borderColor = 'rgba(52,168,83,0.3)';
+    btn.style.color = '#34a853';
+    btn.textContent = '🔑 AI Ready';
+  } else {
+    btn.style.background = '';
+    btn.style.borderColor = '';
+    btn.style.color = '';
+    btn.textContent = '🔑 Add AI Key';
+  }
+}
+
+async function testAndSaveAPIKey() {
   const input = document.getElementById('claude-api-key-input').value.trim();
   const status = document.getElementById('api-key-status');
   if (!input || input.startsWith('•')) {
@@ -2817,6 +3039,13 @@ renderMemoryDB();
 initTemplates();
 renderContactPicker();
 initGoogleTab();
+// Reflect saved API-key state in the header button
+if (IS_CLAUDE_AI) {
+  const akb = document.getElementById('api-key-btn');
+  if (akb) akb.style.display = 'none';   // no key needed inside claude.ai
+} else if (localStorage.getItem('rickey_claude_key')) {
+  updateAIStatus(true);
+}
 if (typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission();
 
 // Wire VCF import
@@ -2935,6 +3164,7 @@ function resetMic(btn, label) {
 const GSCOPES = [
   'https://www.googleapis.com/auth/contacts.readonly',
   'https://www.googleapis.com/auth/calendar',
+  'https://www.googleapis.com/auth/tasks',
   'https://www.googleapis.com/auth/gmail.send',
   'profile','email'
 ].join(' ');
@@ -3072,6 +3302,59 @@ async function importGoogleContacts() {
   } catch(e) {
     status.textContent = '❌ Error: ' + e.message + ' — try reconnecting';
     if (e.message.includes('401')) { gAccessToken = ''; localStorage.removeItem('g_access_token'); }
+  }
+}
+
+// ---- GOOGLE TASKS ----
+async function pushTodosToGoogleTasks() {
+  if (!gAccessToken) { showToast('Connect Google first'); return; }
+  const status = document.getElementById('g-tasks-status');
+  status.style.display = 'block'; status.textContent = '⏳ Syncing to Google Tasks...';
+  const pending = todos.filter(t => !t.done);
+  if (!pending.length) { status.textContent = '⚠️ No pending tasks to sync'; return; }
+  try {
+    // Find (or fall back to) the default task list
+    let listId = '@default';
+    try {
+      const lr = await fetch('https://tasks.googleapis.com/tasks/v1/users/@me/lists', {
+        headers: { Authorization: 'Bearer ' + gAccessToken }
+      });
+      if (lr.ok) {
+        const ld = await lr.json();
+        if (ld.items && ld.items.length) listId = ld.items[0].id;
+      } else if (lr.status === 401) {
+        throw new Error('401');
+      } else if (lr.status === 403) {
+        throw new Error('Tasks API not enabled — enable "Tasks API" in Google Cloud Console, then reconnect');
+      }
+    } catch(e) { if (e.message === '401' || e.message.includes('not enabled')) throw e; }
+
+    let pushed = 0;
+    for (const t of pending) {
+      const notes = [
+        t.category ? 'Category: ' + t.category : '',
+        t.priority ? 'Priority: ' + t.priority : '',
+        'From Rickey AI Agent'
+      ].filter(Boolean).join('\n');
+      const body = { title: t.text, notes, status: 'needsAction' };
+      const resp = await fetch(`https://tasks.googleapis.com/tasks/v1/lists/${listId}/tasks`, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + gAccessToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (resp.ok) { pushed++; t.gtasked = true; }
+      else if (resp.status === 401) throw new Error('401');
+    }
+    save();
+    status.textContent = `✅ ${pushed} task(s) synced to Google Tasks`;
+    showToast(`✅ ${pushed} task(s) sent to Google Tasks!`);
+  } catch(e) {
+    if (e.message === '401') {
+      status.textContent = '❌ Session expired — please reconnect Google';
+      gAccessToken = ''; localStorage.removeItem('g_access_token');
+    } else {
+      status.textContent = '❌ ' + e.message;
+    }
   }
 }
 
