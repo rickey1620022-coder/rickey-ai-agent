@@ -739,7 +739,7 @@
 <header class="header">
   <div>
     <div class="header-title">RICKEY <span>AI</span> AGENT</div>
-    <div id="app-version-line" style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v2.4.0</div>
+    <div id="app-version-line" style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v2.4.2</div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
     <button id="api-key-btn" onclick="openAPIKey()" style="display:flex;align-items:center;gap:6px;background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;">
@@ -3030,8 +3030,8 @@ async function testAndSaveAPIKey() {
 // INIT
 // ============================================================
 // App version + build stamp (shown small under the title)
-const APP_VERSION = 'v2.4.0';
-const APP_BUILD = '2026-06-01 12:00 IST';
+const APP_VERSION = 'v2.4.2';
+const APP_BUILD = '2026-06-01 15:10 IST';
 (function showVersion(){
   const el = document.getElementById('app-version-line');
   if (el) el.textContent = APP_VERSION + ' • ' + APP_BUILD;
@@ -3315,54 +3315,84 @@ async function importGoogleContacts() {
 
 // ---- GOOGLE TASKS ----
 async function pushTodosToGoogleTasks() {
-  if (!gAccessToken) { showToast('Connect Google first'); return; }
+  if (!gAccessToken) { showToast('🔑 Connect Google first (Google tab)'); return; }
   const status = document.getElementById('g-tasks-status');
-  status.style.display = 'block'; status.textContent = '⏳ Syncing to Google Tasks...';
-  const pending = todos.filter(t => !t.done);
-  if (!pending.length) { status.textContent = '⚠️ No pending tasks to sync'; return; }
-  try {
-    // Find (or fall back to) the default task list
-    let listId = '@default';
-    try {
-      const lr = await fetch('https://tasks.googleapis.com/tasks/v1/users/@me/lists', {
-        headers: { Authorization: 'Bearer ' + gAccessToken }
-      });
-      if (lr.ok) {
-        const ld = await lr.json();
-        if (ld.items && ld.items.length) listId = ld.items[0].id;
-      } else if (lr.status === 401) {
-        throw new Error('401');
-      } else if (lr.status === 403) {
-        throw new Error('Tasks API not enabled — enable "Tasks API" in Google Cloud Console, then reconnect');
-      }
-    } catch(e) { if (e.message === '401' || e.message.includes('not enabled')) throw e; }
+  const setStatus = (msg, color) => { if (status) { status.style.display = 'block'; status.textContent = msg; if (color) status.style.color = color; } };
+  setStatus('⏳ Syncing to Google Tasks...', 'var(--muted)');
+  showToast('⏳ Syncing to Google Tasks...');
 
-    let pushed = 0;
+  const pending = todos.filter(t => !t.done);
+  if (!pending.length) { setStatus('⚠️ No pending tasks to sync'); showToast('No pending tasks to sync'); return; }
+
+  try {
+    // Use a dedicated Google Tasks list named "Rickey AI Agent" (create if missing)
+    const LIST_NAME = 'Rickey AI Agent';
+    let listId = null;
+    const lr = await fetch('https://tasks.googleapis.com/tasks/v1/users/@me/lists', {
+      headers: { Authorization: 'Bearer ' + gAccessToken }
+    });
+    if (lr.ok) {
+      const ld = await lr.json();
+      const found = (ld.items || []).find(l => l.title === LIST_NAME);
+      if (found) listId = found.id;
+    } else {
+      const errBody = await lr.json().catch(() => ({}));
+      const reason = (errBody.error && errBody.error.message) ? errBody.error.message.toLowerCase() : '';
+      if (lr.status === 401 || reason.includes('invalid authentication') || reason.includes('insufficient')) {
+        throw new Error('SCOPE');
+      }
+      if (lr.status === 403 && (reason.includes('has not been used') || reason.includes('disabled') || reason.includes('not enabled'))) {
+        throw new Error('APIOFF');
+      }
+      if (lr.status === 403) throw new Error('SCOPE'); // 403 usually = missing Tasks permission
+      throw new Error('Tasks error ' + lr.status);
+    }
+    // Create the list if it doesn't exist yet
+    if (!listId) {
+      const cr = await fetch('https://tasks.googleapis.com/tasks/v1/users/@me/lists', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + gAccessToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: LIST_NAME })
+      });
+      if (cr.ok) { listId = (await cr.json()).id; }
+      else if (cr.status === 401 || cr.status === 403) throw new Error('SCOPE');
+      else throw new Error('Could not create the "' + LIST_NAME + '" list');
+    }
+
+    let pushed = 0, failed = 0;
     for (const t of pending) {
+      if (t.gtasked) continue; // don't duplicate already-synced tasks
       const notes = [
         t.category ? 'Category: ' + t.category : '',
         t.priority ? 'Priority: ' + t.priority : '',
         'From Rickey AI Agent'
       ].filter(Boolean).join('\n');
-      const body = { title: t.text, notes, status: 'needsAction' };
       const resp = await fetch(`https://tasks.googleapis.com/tasks/v1/lists/${listId}/tasks`, {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + gAccessToken, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify({ title: t.text, notes, status: 'needsAction' })
       });
       if (resp.ok) { pushed++; t.gtasked = true; }
-      else if (resp.status === 401) throw new Error('401');
+      else if (resp.status === 401 || resp.status === 403) { throw new Error('SCOPE'); }
+      else { failed++; }
     }
     save();
-    status.textContent = `✅ ${pushed} task(s) synced to Google Tasks`;
-    showToast(`✅ ${pushed} task(s) sent to Google Tasks!`);
+    const already = pending.length - pushed - failed;
+    const msg = `✅ ${pushed} task(s) added to the "Rickey AI Agent" list` + (already ? ` (${already} already synced)` : '') + (failed ? ` • ${failed} failed` : '');
+    setStatus(msg, '#34a853');
+    showToast(pushed ? msg : '✅ Already up to date — see the "Rickey AI Agent" list in Google Tasks');
   } catch(e) {
-    if (e.message === '401') {
-      status.textContent = '❌ Session expired — please reconnect Google';
+    let msg;
+    if (e.message === 'SCOPE') {
+      msg = '❌ Google didn\'t grant Tasks access. Sign out in the Google tab, reconnect, and tap "Allow" for Tasks.';
       gAccessToken = ''; localStorage.removeItem('g_access_token');
+    } else if (e.message === 'APIOFF') {
+      msg = '❌ Turn on "Google Tasks API" in Google Cloud Console (APIs & Services → Enable), wait 5 min, then retry.';
     } else {
-      status.textContent = '❌ ' + e.message;
+      msg = '❌ ' + e.message + ' — check internet and try again.';
     }
+    setStatus(msg, '#dc2626');
+    showToast(msg);
   }
 }
 
