@@ -180,6 +180,16 @@
   }
   .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
 
+  .rate-link-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); text-decoration: none;
+    padding: 7px 12px; border-radius: 8px;
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.74rem;
+    transition: all 0.2s;
+  }
+  .rate-link-btn:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
+
   /* AI Thinking */
   .ai-thinking {
     display: none;
@@ -739,7 +749,7 @@
 <header class="header">
   <div>
     <div class="header-title">RICKEY <span>AI</span> AGENT</div>
-    <div id="app-version-line" style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v2.6.1</div>
+    <div id="app-version-line" style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v2.9.0</div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
     <button id="api-key-btn" onclick="openAPIKey()" style="display:flex;align-items:center;gap:6px;background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;">
@@ -773,21 +783,27 @@
   </div>
 </div>
 
-<!-- ===== NALCO ALUMINIUM RATE STRIP (above tabs; hidden unless it loads) ===== -->
-<div id="nalco-card" style="display:none;margin:0 16px 0;padding:10px 16px;border-radius:12px;background:linear-gradient(135deg, rgba(124,58,237,0.12), rgba(37,99,235,0.07));border:1px solid rgba(124,58,237,0.25);">
+<!-- ===== NALCO ALUMINIUM RATE (above tabs; hidden unless it loads) ===== -->
+<div id="nalco-card" style="display:none;margin:0 16px 0;padding:10px 14px;border-radius:12px;background:linear-gradient(135deg, rgba(124,58,237,0.12), rgba(37,99,235,0.07));border:1px solid rgba(124,58,237,0.25);">
   <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-    <div style="display:flex;align-items:center;gap:10px;">
-      <span style="font-size:1.5rem;">🏭</span>
+    <div id="nalco-block" style="display:none;align-items:center;gap:8px;">
+      <span style="font-size:1.4rem;">🏭</span>
       <div>
-        <span style="font-size:0.66rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;">NALCO Aluminium Ingot</span>
+        <span style="font-size:0.6rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;">NALCO Aluminium Ingot</span>
         <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
-          <span id="nalco-price" style="font-size:1.25rem;font-weight:800;font-family:'Syne',sans-serif;color:var(--accent);line-height:1.1;">—</span>
+          <span id="nalco-price" style="font-size:1.3rem;font-weight:800;font-family:'Syne',sans-serif;color:var(--accent);line-height:1.1;">—</span>
         </div>
-        <div id="nalco-meta" style="font-size:0.66rem;color:var(--muted);"></div>
+        <div id="nalco-meta" style="font-size:0.62rem;color:var(--muted);"></div>
       </div>
     </div>
-    <button class="btn-ghost btn-sm" onclick="loadNalcoRate(true)" title="Refresh rate" style="font-size:0.68rem;padding:4px 8px;">↻</button>
+    <button class="btn-ghost btn-sm" onclick="loadRates(true)" title="Refresh rate" style="font-size:0.68rem;padding:4px 8px;">↻</button>
   </div>
+</div>
+
+<!-- Always-visible quick links to live Delhi market rates (open the real sites) -->
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 16px 0;">
+  <a href="https://shreemetalprices.com/delhi-scrap-prices-today/" target="_blank" rel="noopener" class="rate-link-btn">📍 Delhi rates (Shree)</a>
+  <a href="https://www.metalmandi.in/scrap-rate" target="_blank" rel="noopener" class="rate-link-btn">📊 MetalMandi</a>
 </div>
 
 <nav class="nav">
@@ -1142,6 +1158,20 @@
       <button class="btn-ghost btn-sm" onclick="renderMemoryDB()">↻ Refresh</button>
     </div>
     <div id="db-keys-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+  </div>
+
+  <!-- Live rates source (Cloudflare Worker URL) -->
+  <div class="panel" style="margin-bottom:16px;">
+    <div class="panel-title">📈 Live Rates Source</div>
+    <div style="font-size:0.8rem;color:var(--muted);line-height:1.6;margin-bottom:10px;">
+      Paste your free rates helper URL to show today's NALCO + Delhi (Shree) aluminium rates on the top strip. Works with a Google Apps Script web app (ends in <strong>/exec</strong>) or a Cloudflare Worker. See the deploy guide. Leave blank to hide the rate strip.
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <input class="form-input" id="rates-worker-input" placeholder="https://rickey-rates.xxx.workers.dev" style="flex:1;min-width:200px;" />
+      <button class="btn btn-accent" onclick="saveRatesWorker()">Save</button>
+      <button class="btn-ghost" onclick="loadRates(true)">Test</button>
+    </div>
+    <div id="rates-worker-status" style="font-size:0.78rem;margin-top:8px;color:var(--muted);"></div>
   </div>
 
   <!-- Google Drive backup (free, your own Drive, syncs across your phones) -->
@@ -3160,113 +3190,102 @@ async function testAndSaveAPIKey() {
 }
 
 // ============================================================
-// NALCO ALUMINIUM RATE (front page)
+// ALUMINIUM RATES (front-page strip) — via your free Cloudflare Worker
 // ------------------------------------------------------------
-// The official NALCO ingot price circular lives at a dated URL:
-//   https://nalcoindia.com/wp-content/uploads/2019/01/Ingot-DD-MM-YYYY.pdf
-// Prices change only every few days, so we try today and walk back a few days
-// until one loads. Browsers can't fetch the PDF cross-site directly, so we go
-// through a CORS proxy. If EVERYTHING fails (offline, proxy down, not published)
-// the card simply stays hidden — no error, no broken layout.
+// Browsers can't read nalcoindia.com / shreemetalprices.com directly (no CORS).
+// A tiny free Worker fetches them and returns clean JSON. Set its URL in
+// Memory DB → "Live Rates Source". If no Worker is set, or it's unreachable,
+// or you're offline, the strip simply stays hidden — no error, no broken layout.
+// (See worker/rates-worker.js and worker/DEPLOY.md.)
 // ============================================================
-function nalcoUrlFor(d) {
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const yyyy = d.getFullYear();
-  return `https://nalcoindia.com/wp-content/uploads/2019/01/Ingot-${dd}-${mm}-${yyyy}.pdf`;
+function getRatesWorkerUrl() {
+  return (localStorage.getItem('rickey_rates_worker') || '').trim().replace(/\/+$/, '');
 }
 
-// Pull the standard aluminium ingot price (grade IE07) in ₹/MT from PDF text.
-function parseNalcoAluminium(text) {
-  if (!text || !/ALUMINIUM/i.test(text)) return null;
-  // Prefer IE07 (plain aluminium ingot). Fall back to first IExx ingot line.
-  let m = text.match(/IE07\s*([0-9]{5,7})/);
-  if (!m) m = text.match(/IE10\s*([0-9]{5,7})/);
-  if (!m) m = text.match(/ALUMINIUM\s+INGOT\s+IE\d+\s*([0-9]{5,7})/i);
-  if (!m) return null;
-  const perMT = parseInt(m[1], 10);
-  if (!perMT || perMT < 50000 || perMT > 9999999) return null; // sanity check
-  return perMT;
-}
-
-async function tryFetchNalco(url) {
-  // A couple of public CORS proxies; try each, short timeout, give up quietly.
-  const proxies = [
-    u => 'https://corsproxy.io/?' + encodeURIComponent(u),
-    u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u)
-  ];
-  for (const make of proxies) {
-    try {
-      const controller = new AbortController();
-      const t = setTimeout(() => controller.abort(), 6000);
-      const res = await fetch(make(url), { signal: controller.signal });
-      clearTimeout(t);
-      if (!res.ok) continue;
-      const text = await res.text();
-      const price = parseNalcoAluminium(text);
-      if (price) return price;
-    } catch (e) { /* try next proxy / next day, stay silent */ }
+function saveRatesWorker() {
+  const input = document.getElementById('rates-worker-input');
+  let url = (input.value || '').trim().replace(/\/+$/, '');
+  const status = document.getElementById('rates-worker-status');
+  if (url && !/^https:\/\/.+/i.test(url)) {
+    if (status) { status.textContent = '❌ Must start with https://'; status.style.color = '#dc2626'; }
+    return;
   }
-  return null;
+  localStorage.setItem('rickey_rates_worker', url);
+  if (status) { status.textContent = url ? '✅ Saved. Tap Test to load rates.' : 'Cleared — rate strip will stay hidden.'; status.style.color = url ? '#34a853' : 'var(--muted)'; }
+  if (url) loadRates(true);
+  else { const c = document.getElementById('nalco-card'); if (c) c.style.display = 'none'; }
 }
 
-async function loadNalcoRate(manual) {
+async function loadRates(manual) {
   const card = document.getElementById('nalco-card');
   if (!card) return;
-  if (manual) showToast('↻ Checking NALCO rate...');
 
-  // Use a cached value immediately if it's from today (keeps front page instant)
+  // Show cached rates instantly (keeps the strip up even before the network call)
   try {
-    const cached = JSON.parse(localStorage.getItem('rickey_nalco') || 'null');
-    if (cached && cached.dateLabel) {
-      showNalco(cached.perMT, cached.dateLabel, cached.fetched);
-      // If cached today and not a manual refresh, don't re-fetch
+    const cached = JSON.parse(localStorage.getItem('rickey_rates_cache') || 'null');
+    if (cached) {
+      showRates(cached);
       if (!manual && cached.fetchedDay === new Date().toDateString()) return;
     }
   } catch (e) {}
 
-  // Only attempt network if the browser thinks it's online
+  const base = getRatesWorkerUrl();
+  if (!base) { if (manual) showToast('Set your Rates Source in Memory DB tab first'); return; }
   if (navigator && navigator.onLine === false) return;
+  if (manual) showToast('↻ Checking today\'s rates...');
 
-  // Try today, then walk back up to 10 days for the most recent published circular
-  for (let i = 0; i < 10; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const price = await tryFetchNalco(nalcoUrlFor(d));
-    if (price) {
-      const dateLabel = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-      const rec = { perMT: price, dateLabel, fetched: new Date().toISOString(), fetchedDay: new Date().toDateString() };
-      try { localStorage.setItem('rickey_nalco', JSON.stringify(rec)); } catch (e) {}
-      showNalco(price, dateLabel, rec.fetched);
-      if (manual) showToast('✅ NALCO rate updated');
-      return;
+  try {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), 9000);
+    // Build the rates endpoint for either backend:
+    //  - Google Apps Script web app (…/exec)  → add ?path=rates
+    //  - Cloudflare Worker (…workers.dev)      → add /rates
+    let endpoint;
+    if (/script\.google\.com/.test(base) || /\/exec$/.test(base)) {
+      endpoint = base + (base.includes('?') ? '&' : '?') + 'path=rates';
+    } else {
+      endpoint = base + '/rates';
     }
+    const res = await fetch(endpoint, { signal: controller.signal });
+    clearTimeout(t);
+    if (!res.ok) throw new Error('worker ' + res.status);
+    const data = await res.json();
+    if (!data || !data.nalco) throw new Error('no rates');
+    data.fetched = new Date().toISOString();
+    data.fetchedDay = new Date().toDateString();
+    try { localStorage.setItem('rickey_rates_cache', JSON.stringify(data)); } catch (e) {}
+    showRates(data);
+    if (manual) showToast('✅ Rates updated');
+  } catch (e) {
+    // Silent: keep whatever cache we showed; never break the page.
+    if (manual) showToast('Could not fetch rates right now');
   }
-  // Nothing loaded. If we had no cache to show, keep the card hidden silently.
-  if (manual) showToast('Could not fetch NALCO rate right now');
 }
 
-function showNalco(perMT, dateLabel, fetchedISO) {
+function showRates(data) {
   const card = document.getElementById('nalco-card');
   if (!card) return;
-  const perKg = (perMT / 1000);
-  document.getElementById('nalco-price').textContent = '₹' + Number(perMT).toLocaleString('en-IN') + ' /MT';
-  const kgStr = '≈ ₹' + perKg.toLocaleString('en-IN', { maximumFractionDigits: 2 }) + '/kg';
-  let when = '';
-  try {
-    const f = new Date(fetchedISO);
-    when = ' • updated ' + f.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-  } catch (e) {}
-  document.getElementById('nalco-meta').textContent = 'Ingot (IE07) • ' + dateLabel + ' • ' + kgStr + when;
-  card.style.display = 'block';
+  const nBlock = document.getElementById('nalco-block');
+  const when = (() => { try { return ' • upd ' + new Date(data.fetched).toLocaleDateString('en-IN',{day:'numeric',month:'short'}); } catch(e){ return ''; } })();
+
+  if (data.nalco && data.nalco.perMT) {
+    document.getElementById('nalco-price').textContent = '₹' + Number(data.nalco.perMT).toLocaleString('en-IN') + '/MT';
+    const kg = data.nalco.perKg || (data.nalco.perMT / 1000);
+    document.getElementById('nalco-meta').textContent = 'IE07 • ' + (data.nalco.date || '') + ' • ≈₹' + Number(kg).toLocaleString('en-IN',{maximumFractionDigits:2}) + '/kg' + when;
+    nBlock.style.display = 'flex';
+    card.style.display = 'block';
+  } else {
+    nBlock.style.display = 'none';
+    card.style.display = 'none';
+  }
 }
 
 // ============================================================
 // INIT
 // ============================================================
 // App version + build stamp (shown small under the title)
-const APP_VERSION = 'v2.6.1';
-const APP_BUILD = '2026-06-01 17:40 IST';
+const APP_VERSION = 'v2.9.0';
+const APP_BUILD = '2026-06-01 21:40 IST';
 (function showVersion(){
   const el = document.getElementById('app-version-line');
   if (el) el.textContent = APP_VERSION + ' • ' + APP_BUILD;
@@ -3274,7 +3293,11 @@ const APP_BUILD = '2026-06-01 17:40 IST';
 
 renderTodos();
 renderReminders();
-loadNalcoRate();  // front-page aluminium rate; hides itself if net/source unavailable
+loadRates();  // front-page aluminium rates (NALCO + Shree) via your Worker; hides if unavailable
+(function prefillRatesWorker(){
+  const inp = document.getElementById('rates-worker-input');
+  if (inp) inp.value = localStorage.getItem('rickey_rates_worker') || '';
+})();
 renderNotes();
 renderPhotos();
 renderWAScheduled();
