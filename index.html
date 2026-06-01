@@ -255,6 +255,10 @@
   .reminder-icon.payment { background: rgba(220,38,38,0.1); }
   .reminder-icon.sales { background: rgba(109,40,217,0.1); }
   .reminder-icon.call { background: rgba(124,58,237,0.08); }
+  .reminder-icon.payment_recv { background: rgba(34,197,94,0.12); }
+  .reminder-icon.payment_make { background: rgba(220,38,38,0.1); }
+  .reminder-icon.bill { background: rgba(217,119,6,0.12); }
+  .reminder-icon.followup { background: rgba(37,99,235,0.1); }
   .reminder-body { flex: 1; }
   .reminder-title { font-size: 0.9rem; font-weight: 500; margin-bottom: 4px; }
   .reminder-sub { font-size: 0.76rem; color: var(--muted); }
@@ -705,10 +709,14 @@
   }
 
   @media(max-width: 700px) {
-    .nav { display: none; }
-    .mobile-nav { display: flex; }
+    .nav {
+      flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
+      padding: 12px 12px 0; gap: 6px; scrollbar-width: none;
+    }
+    .nav::-webkit-scrollbar { display: none; }
+    .nav-btn { flex: 0 0 auto; white-space: nowrap; padding: 9px 14px; font-size: 0.78rem; }
     main {
-      padding-bottom: calc(76px + env(safe-area-inset-bottom));
+      padding-bottom: calc(24px + env(safe-area-inset-bottom));
       padding-left: 12px; padding-right: 12px;
     }
     .panel { padding: 14px 12px; border-radius: 12px; }
@@ -724,9 +732,6 @@
     .wa-subtabs { gap: 2px; }
     .wa-subtab { padding: 8px 10px; font-size: 0.72rem; }
   }
-  @media(min-width: 701px) {
-    .mobile-nav { display: none !important; }
-  }
 </style>
 </head>
 <body>
@@ -734,7 +739,7 @@
 <header class="header">
   <div>
     <div class="header-title">RICKEY <span>AI</span> AGENT</div>
-    <div style="font-size:0.62rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v2.3.0</div>
+    <div id="app-version-line" style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v2.4.0</div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
     <button id="api-key-btn" onclick="openAPIKey()" style="display:flex;align-items:center;gap:6px;background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;">
@@ -770,12 +775,8 @@
 
 <nav class="nav">
   <button class="nav-btn active" onclick="switchTab('todo',this)">
-    <span class="icon">✅</span> <span class="label">To-Do</span>
+    <span class="icon">✅</span> <span class="label">Tasks</span>
     <span class="badge" id="todo-badge">0</span>
-  </button>
-  <button class="nav-btn" onclick="switchTab('reminders',this)">
-    <span class="icon">📞</span> <span class="label">Reminders</span>
-    <span class="badge" id="rem-badge" style="background:var(--accent4);color:#fff">0</span>
   </button>
   <button class="nav-btn" onclick="switchTab('notes',this)">
     <span class="icon">📒</span> <span class="label">Notes DB</span>
@@ -793,59 +794,21 @@
   </button>
 </nav>
 
-<!-- MOBILE BOTTOM NAV -->
-<nav class="mobile-nav" id="mobile-nav">
-  <button class="mobile-nav-btn active" id="mn-todo" onclick="switchTabMobile('todo',this)">
-    <span class="mn-icon">✅</span>
-    <span id="mn-todo-badge" class="mn-badge" style="display:none;"></span>
-    Tasks
-  </button>
-  <button class="mobile-nav-btn" id="mn-reminders" onclick="switchTabMobile('reminders',this)">
-    <span class="mn-icon">📞</span>
-    <span id="mn-rem-badge" class="mn-badge" style="display:none;"></span>
-    Remind
-  </button>
-  <button class="mobile-nav-btn" id="mn-notes" onclick="switchTabMobile('notes',this)">
-    <span class="mn-icon">📒</span>
-    Notes
-  </button>
-  <button class="mobile-nav-btn" id="mn-whatsapp" onclick="switchTabMobile('whatsapp',this)">
-    <span class="mn-icon">💬</span>
-    <span id="mn-wa-badge" class="mn-badge" style="background:#25d366;display:none;"></span>
-    WA
-  </button>
-  <button class="mobile-nav-btn" id="mn-google" onclick="switchTabMobile('google',this)">
-    <span class="mn-icon">🔗</span>
-    Google
-  </button>
-  <button class="mobile-nav-btn" id="mn-memory" onclick="switchTabMobile('memory',this)">
-    <span class="mn-icon">🗄️</span>
-    DB
-  </button>
-</nav>
-
 <main>
 
-<!-- ========== TO-DO TAB ========== -->
+<!-- ========== TASKS TAB (To-Do + Reminders merged, no AI) ========== -->
 <div class="tab active" id="tab-todo">
+
+  <!-- ===== SIMPLE TO-DO ===== -->
   <div class="panel">
-    <div class="panel-title">🤖 AI Task Generator</div>
-    <div style="display:flex;gap:10px;align-items:flex-start;">
-      <div class="ai-input-box" style="flex:1;margin-bottom:0;">
-        <input type="text" id="todo-prompt" placeholder="Tell AI what to add... e.g. 'Follow up with Raj for payment, call new client tomorrow'" />
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:center;">
-        <button class="mic-btn" id="mic-todo" onclick="startVoice('todo-prompt','mic-todo','mic-todo-label')" title="Speak your task">🎤</button>
-        <div class="voice-label" id="mic-todo-label">Tap</div>
-      </div>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
-      <button class="btn btn-accent" onclick="aiGenerateTodo()">⚡ Add Tasks</button>
-      <button class="btn btn-blue" onclick="openAddTodo()">+ Add Manually</button>
+    <div class="panel-title">✅ My To-Do List</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <input class="form-input" id="todo-quick" placeholder="Type a task, then tap Add…" style="flex:1;min-width:160px;" onkeydown="if(event.key==='Enter'){addTodoQuick();}" />
+      <button class="btn btn-accent" onclick="addTodoQuick()">➕ Add</button>
       <button class="btn-ghost" onclick="clearDone()">Clear Done</button>
     </div>
-    <div class="ai-thinking" id="todo-thinking">
-      <div class="dots"><span></span><span></span><span></span></div> AI is thinking...
+    <div style="margin-top:10px;">
+      <button class="btn g-btn-blue btn-sm" onclick="pushTodosToGoogleTasks()" style="font-size:0.78rem;">📤 Sync to Google Tasks</button>
     </div>
   </div>
 
@@ -865,29 +828,18 @@
   </div>
 
   <div class="todo-list" id="todo-list">
-    <div class="empty"><div class="big">✅</div>Tell AI to generate tasks or add manually</div>
+    <div class="empty"><div class="big">✅</div>No tasks yet — type one above and tap Add</div>
   </div>
-</div>
 
-<!-- ========== REMINDERS TAB ========== -->
-<div class="tab" id="tab-reminders">
-  <div class="panel">
-    <div class="panel-title">🤖 AI Reminder Creator</div>
-    <div style="display:flex;gap:10px;align-items:flex-start;">
-      <div class="ai-input-box" style="flex:1;margin-bottom:0;">
-        <input type="text" id="rem-prompt" placeholder="e.g. 'Call Mehta bhai for ₹45000 payment due 20th May, follow up with XYZ for order'" />
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:center;">
-        <button class="mic-btn" id="mic-rem" onclick="startVoice('rem-prompt','mic-rem','mic-rem-label')" title="Speak your reminder">🎤</button>
-        <div class="voice-label" id="mic-rem-label">Tap</div>
-      </div>
+  <!-- ===== CALL & PAYMENT REMINDERS ===== -->
+  <div class="panel" style="margin-top:20px;">
+    <div class="panel-title">📞 Call &amp; Payment Reminders</div>
+    <div style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;line-height:1.6;">
+      Pick a category, set the date &amp; time, then add it to Google Calendar — each one is a single one-time reminder event.
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
-      <button class="btn btn-accent" onclick="aiGenerateReminder()">⚡ Add Tasks</button>
-      <button class="btn btn-blue" onclick="openAddReminder()">+ Add Manually</button>
-    </div>
-    <div class="ai-thinking" id="rem-thinking">
-      <div class="dots"><span></span><span></span><span></span></div> AI is thinking...
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-accent" onclick="openAddReminder()">➕ Add Reminder</button>
+      <button class="btn g-btn-blue" onclick="pushRemindersToCalendar()">📅 Add All to Google Calendar</button>
     </div>
   </div>
 
@@ -907,7 +859,7 @@
   </div>
 
   <div class="reminder-list" id="reminder-list">
-    <div class="empty"><div class="big">📞</div>Add payment & sales call reminders</div>
+    <div class="empty"><div class="big">📞</div>No reminders yet — tap “Add Reminder”</div>
   </div>
 </div>
 
@@ -1434,11 +1386,13 @@
       <input class="form-input" id="m-rem-name" placeholder="e.g. Mehta Traders" />
     </div>
     <div class="form-group">
-      <label class="form-label">Type</label>
+      <label class="form-label">Category</label>
       <select class="form-select" id="m-rem-type">
-        <option value="payment">💰 Payment Collection</option>
-        <option value="sales">📦 Sales Follow-up</option>
-        <option value="call">📞 General Call</option>
+        <option value="call">📞 Call (date &amp; time)</option>
+        <option value="payment_recv">💰 Payment received call</option>
+        <option value="payment_make">💸 Make payment call</option>
+        <option value="bill">🧾 Bill last-date reminder</option>
+        <option value="followup">🔄 Follow-up call for order</option>
       </select>
     </div>
     <div class="form-group">
@@ -1725,6 +1679,18 @@ function addTodoManual() {
   showToast('Task added!');
 }
 
+// Simple inline add — no AI, just a task
+function addTodoQuick() {
+  const input = document.getElementById('todo-quick');
+  const text = input.value.trim();
+  if (!text) { showToast('Type a task first'); return; }
+  todos.unshift({ id: uid(), text, priority: 'med', category: 'General', done: false, created: new Date().toISOString() });
+  save(); renderTodos();
+  input.value = '';
+  input.focus();
+  showToast('✅ Task added');
+}
+
 function toggleTodo(id) {
   const t = todos.find(x => x.id === id);
   if (t) { t.done = !t.done; save(); renderTodos(); }
@@ -1851,7 +1817,7 @@ function aiGenerateReminder() {
 function addReminderManual() {
   const name = document.getElementById('m-rem-name').value.trim();
   if (!name) { showToast('Enter name'); return; }
-  reminders.unshift({
+  const newRem = {
     id: uid(),
     name,
     type: document.getElementById('m-rem-type').value,
@@ -1860,9 +1826,16 @@ function addReminderManual() {
     callTime: document.getElementById('m-rem-time').value || null,
     note: document.getElementById('m-rem-note').value,
     done: false, created: new Date().toISOString()
-  });
+  };
+  reminders.unshift(newRem);
   save(); renderReminders(); closeModal('modal-reminder');
-  showToast('Reminder added!');
+  // Add to Google Calendar as a one-time event (opens pre-filled event)
+  if (newRem.dueDate) {
+    addReminderToCalendar(newRem.id);
+    showToast('📅 Reminder saved — adding to Google Calendar');
+  } else {
+    showToast('Reminder added! (set a date to add it to Calendar)');
+  }
 }
 
 function deleteReminder(id) {
@@ -1886,8 +1859,21 @@ function getDueClass(dueDate) {
   return { cls: 'due-ok', label: due.toLocaleDateString('en-IN', {day:'numeric',month:'short'}) };
 }
 
+// Reminder categories (the 5 requested) + legacy fallbacks
+const REM_CATS = {
+  call:         { icon:'📞', label:'Call',                  cal:'📞 Call: ' },
+  payment_recv: { icon:'💰', label:'Payment received call', cal:'💰 Payment received: ' },
+  payment_make: { icon:'💸', label:'Make payment call',     cal:'💸 Make payment: ' },
+  bill:         { icon:'🧾', label:'Bill last-date',        cal:'🧾 Bill due: ' },
+  followup:     { icon:'🔄', label:'Follow-up for order',   cal:'🔄 Follow-up: ' },
+  // legacy data from older versions
+  payment:      { icon:'💰', label:'Payment',               cal:'💰 Payment: ' },
+  sales:        { icon:'📦', label:'Sales follow-up',       cal:'📦 Sales: ' },
+};
+function remCat(t) { return REM_CATS[t] || REM_CATS.call; }
+
 function typeIcon(type) {
-  return type === 'payment' ? '💰' : type === 'sales' ? '📦' : '📞';
+  return remCat(type).icon;
 }
 
 function renderReminders() {
@@ -1906,7 +1892,8 @@ function renderReminders() {
   document.getElementById('r-overdue').textContent = overdue;
   document.getElementById('r-today').textContent = todayCount;
   document.getElementById('r-total').textContent = reminders.length;
-  document.getElementById('rem-badge').textContent = overdue + todayCount;
+  const remBadge = document.getElementById('rem-badge');
+  if (remBadge) remBadge.textContent = overdue + todayCount;
 
   if (!reminders.length) {
     list.innerHTML = '<div class="empty"><div class="big">📞</div>No reminders yet</div>';
@@ -1928,7 +1915,7 @@ function renderReminders() {
       <div class="reminder-icon ${r.type}">${typeIcon(r.type)}</div>
       <div class="reminder-body">
         <div class="reminder-title">${r.name}${r.amount ? ` &nbsp;<span class="reminder-amount">₹${Number(r.amount).toLocaleString('en-IN')}</span>` : ''}</div>
-        <div class="reminder-sub">${r.note || (r.type === 'payment' ? 'Payment collection' : r.type === 'sales' ? 'Sales follow-up' : 'Call reminder')}</div>
+        <div class="reminder-sub">${r.note || remCat(r.type).label}</div>
         ${(callDateStr || callTimeStr) ? `<div class="call-time-badge">📅 ${callDateStr}${callTimeStr ? ' &nbsp;⏰ ' + callTimeStr : ''}</div>` : ''}
         <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap;">
           <button class="btn-ghost btn-sm" style="color:#25d366;border-color:#25d366;font-size:0.7rem;" onclick="sendReminderWA('${r.id}')">💬 WA</button>
@@ -1950,11 +1937,24 @@ function sendReminderWA(id) {
   if (!r) return;
   // Find contact phone if exists
   const contact = contacts.find(c => c.name.toLowerCase().includes(r.name.toLowerCase().split(' ')[0]) || r.name.toLowerCase().includes(c.name.toLowerCase().split(' ')[0]));
-  const msg = r.type === 'payment'
-    ? `Hello ${r.name}, this is a gentle reminder for payment${r.amount ? ' of ₹' + Number(r.amount).toLocaleString('en-IN') : ''}${r.dueDate ? ' due on ' + new Date(r.dueDate).toLocaleDateString('en-IN',{day:'numeric',month:'short'}) : ''}. Kindly arrange at your earliest. Thank you 🙏`
-    : r.type === 'sales'
-    ? `Hello ${r.name}, wanted to follow up on our last discussion. Please let me know if you have any requirements. Thank you 🙏`
-    : `Hello ${r.name}, this is a reminder for our call${r.dueDate ? ' on ' + new Date(r.dueDate).toLocaleDateString('en-IN',{day:'numeric',month:'short'}) : ''}${r.callTime ? ' at ' + formatTime12(r.callTime) : ''}. Please confirm. Thank you 🙏`;
+  const dateStr = r.dueDate ? new Date(r.dueDate).toLocaleDateString('en-IN',{day:'numeric',month:'short'}) : '';
+  const timeStr = r.callTime ? formatTime12(r.callTime) : '';
+  const amt = r.amount ? ' of ₹' + Number(r.amount).toLocaleString('en-IN') : '';
+  let msg;
+  switch (r.type) {
+    case 'payment_recv':
+      msg = `Hello ${r.name}, thank you — we have received your payment${amt}. Please confirm at your end. Thank you 🙏`; break;
+    case 'payment_make':
+    case 'payment':
+      msg = `Hello ${r.name}, this is a gentle reminder for payment${amt}${dateStr ? ' due on ' + dateStr : ''}. Kindly arrange at your earliest. Thank you 🙏`; break;
+    case 'bill':
+      msg = `Hello ${r.name}, this is a reminder that the bill${amt} is due${dateStr ? ' by ' + dateStr : ''}. Kindly clear it on time. Thank you 🙏`; break;
+    case 'followup':
+    case 'sales':
+      msg = `Hello ${r.name}, following up on your order${dateStr ? ' (' + dateStr + ')' : ''}. Please let me know the status or any requirement. Thank you 🙏`; break;
+    default:
+      msg = `Hello ${r.name}, this is a reminder for our call${dateStr ? ' on ' + dateStr : ''}${timeStr ? ' at ' + timeStr : ''}. Please confirm. Thank you 🙏`;
+  }
   if (contact) {
     window.open('https://wa.me/' + contact.phone + '?text=' + encodeURIComponent(msg), '_blank');
   } else {
@@ -1968,7 +1968,7 @@ function sendReminderWA(id) {
 function addReminderToCalendar(id) {
   const r = reminders.find(x => x.id === id);
   if (!r) return;
-  const prefix = r.type==='payment'?'💰 Pay: ':r.type==='sales'?'📦 Sales: ':'📞 Call: ';
+  const prefix = remCat(r.type).cal;
   const title = encodeURIComponent(prefix+r.name+(r.amount?' ₹'+r.amount:''));
   const details = encodeURIComponent(r.note || '');
   let dates = '';
@@ -3029,6 +3029,14 @@ async function testAndSaveAPIKey() {
 // ============================================================
 // INIT
 // ============================================================
+// App version + build stamp (shown small under the title)
+const APP_VERSION = 'v2.4.0';
+const APP_BUILD = '2026-06-01 12:00 IST';
+(function showVersion(){
+  const el = document.getElementById('app-version-line');
+  if (el) el.textContent = APP_VERSION + ' • ' + APP_BUILD;
+})();
+
 renderTodos();
 renderReminders();
 renderNotes();
@@ -3371,8 +3379,8 @@ async function pushRemindersToCalendar() {
       const startTime = r.dueDate + 'T' + (r.callTime || '09:00') + ':00';
       const endTime   = r.dueDate + 'T' + (r.callTime ? addOneHour(r.callTime) : '10:00') + ':00';
       const event = {
-        summary: (r.type === 'payment' ? '💰 Payment: ' : r.type === 'sales' ? '📦 Sales: ' : '📞 Call: ') + r.name,
-        description: (r.note || '') + (r.amount ? '\nAmount: ₹' + Number(r.amount).toLocaleString('en-IN') : ''),
+        summary: remCat(r.type).cal + r.name,
+        description: (r.note || '') + (r.amount ? '\nAmount: ₹' + Number(r.amount).toLocaleString('en-IN') : '') + '\n(One-time reminder from Rickey AI Agent)',
         start: { dateTime: startTime, timeZone: 'Asia/Kolkata' },
         end:   { dateTime: endTime,   timeZone: 'Asia/Kolkata' },
         reminders: { useDefault: false, overrides: [{ method:'popup', minutes:30 }, { method:'email', minutes:60 }] }
@@ -3469,10 +3477,6 @@ async function sendGmail() {
 document.querySelectorAll('.overlay:not(#modal-photo-tag), .note-detail').forEach(el => {
   el.addEventListener('click', e => { if (e.target === el) { el.classList.remove('show'); currentNoteId = null; } });
 });
-
-// Enter key for inputs
-document.getElementById('todo-prompt').addEventListener('keydown', e => { if(e.key==='Enter') aiGenerateTodo(); });
-document.getElementById('rem-prompt').addEventListener('keydown', e => { if(e.key==='Enter') aiGenerateReminder(); });
 
 // ============================================================
 // MOBILE NAV
