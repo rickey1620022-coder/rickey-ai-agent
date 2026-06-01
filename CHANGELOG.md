@@ -9,6 +9,35 @@ shown in small text under the title in the app header.
 
 ---
 
+## v2.6.1 — 2026-06-01 17:40 IST
+**Source file:** `versions/rickey-ai-agent-v2.6.1.html`
+
+- **Moved the NALCO aluminium rate above the tabs**, just under the title, so it
+  shows on every tab (not only the Tasks page). Made it a compact one-line strip.
+- Same silent-fail behaviour: hidden when offline / source unavailable.
+- Bumped PWA cache to `rickey-ai-v8`.
+
+## v2.6.0 — 2026-06-01 17:00 IST
+**Source file:** `versions/rickey-ai-agent-v2.6.0.html`
+
+- **Live NALCO aluminium rate on the front page.** A card at the top of the
+  Tasks page shows the official NALCO aluminium ingot price (grade IE07) in
+  ₹/MT, with an approximate ₹/kg and the circular date.
+- It reads NALCO's daily price circular (the dated `Ingot-DD-MM-YYYY.pdf`).
+  Since the circular only changes every few days, the app tries today and walks
+  back up to 10 days to find the most recent published rate.
+- **Fails silently, by design:** if there's no internet, the source/proxy is
+  unavailable, or no circular is found, the card simply stays hidden — no error
+  and no broken layout. The last good rate is cached and shown instantly on the
+  next open.
+- A ↻ Refresh button on the card forces a re-check.
+
+> Technical note: browsers can't read the NALCO PDF directly (no CORS), so the
+> app fetches it via a public CORS proxy. Proxies can be unreliable; that's why
+> the card is built to disappear quietly rather than ever show an error.
+> (The Shree Metal Prices Delhi page was considered but isn't used on the front
+> page — it has no official dated source and is even less reliable to fetch.)
+
 ## v2.5.0 — 2026-06-01 16:00 IST
 **Source file:** `versions/rickey-ai-agent-v2.5.0.html`
 
