@@ -749,7 +749,7 @@
 <header class="header">
   <div>
     <div class="header-title">RICKEY <span>AI</span> AGENT</div>
-    <div id="app-version-line" style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v2.9.0</div>
+    <div id="app-version-line" style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v2.9.1</div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
     <button id="api-key-btn" onclick="openAPIKey()" style="display:flex;align-items:center;gap:6px;background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;">
@@ -3284,8 +3284,8 @@ function showRates(data) {
 // INIT
 // ============================================================
 // App version + build stamp (shown small under the title)
-const APP_VERSION = 'v2.9.0';
-const APP_BUILD = '2026-06-01 21:40 IST';
+const APP_VERSION = 'v2.9.1';
+const APP_BUILD = '2026-06-01 22:10 IST';
 (function showVersion(){
   const el = document.getElementById('app-version-line');
   if (el) el.textContent = APP_VERSION + ' • ' + APP_BUILD;

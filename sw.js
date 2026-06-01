@@ -1,7 +1,7 @@
 // Rickey AI Agent — Service Worker
 // Handles offline caching and PWA install
 
-const CACHE_NAME = 'rickey-ai-v13';
+const CACHE_NAME = 'rickey-ai-v14';
 const ASSETS = [
   './',
   './index.html',
@@ -32,19 +32,40 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Fetch — serve from cache, fallback to network
+// Fetch — network-first for the app shell (so updates show), cache-first for icons
 self.addEventListener('fetch', event => {
-  // Skip non-GET and external API calls
+  // Skip non-GET and external/live calls (never cache these)
   if (event.request.method !== 'GET') return;
-  if (event.request.url.includes('googleapis.com')) return;
-  if (event.request.url.includes('anthropic.com')) return;
-  if (event.request.url.includes('fonts.googleapis.com')) return;
+  const url = event.request.url;
+  if (url.includes('googleapis.com')) return;
+  if (url.includes('anthropic.com')) return;
+  if (url.includes('fonts.googleapis.com')) return;
+  if (url.includes('workers.dev')) return;          // live rate calls — always network
+  if (url.includes('script.google.com')) return;    // Apps Script rate calls
+  if (url.includes('nalcoindia.com')) return;
+  if (url.includes('corsproxy.io') || url.includes('allorigins')) return;
 
+  const isShell = url.endsWith('/') || url.endsWith('index.html') || url.endsWith('sw.js');
+
+  if (isShell) {
+    // NETWORK-FIRST: fetch fresh app, fall back to cache when offline.
+    event.respondWith(
+      fetch(event.request).then(response => {
+        if (response && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        }
+        return response;
+      }).catch(() => caches.match(event.request).then(c => c || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  // CACHE-FIRST for static assets (icons, manifest)
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
       return fetch(event.request).then(response => {
-        // Cache successful responses
         if (response && response.status === 200) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
