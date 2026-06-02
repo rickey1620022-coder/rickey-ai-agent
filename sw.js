@@ -1,7 +1,7 @@
 // Rickey AI Agent — Service Worker
 // Handles offline caching and PWA install
 
-const CACHE_NAME = 'rickey-ai-v15';
+const CACHE_NAME = 'rickey-ai-v17';
 const ASSETS = [
   './',
   './index.html',
@@ -10,15 +10,25 @@ const ASSETS = [
   './icon-512.png'
 ];
 
-// Install — cache all assets
+// Install — cache all assets (don't auto-skip; wait for user to tap Update)
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
       return cache.addAll(ASSETS).catch(err => {
         console.log('Cache addAll error (some assets may not exist yet):', err);
       });
-    }).then(() => self.skipWaiting())
+    })
   );
+});
+
+// Let the page tell a waiting worker to activate now (used by the Update button)
+self.addEventListener('message', event => {
+  if (event.data === 'SKIP_WAITING' || (event.data && event.data.type === 'SKIP_WAITING')) {
+    self.skipWaiting();
+  }
+  if (event.data === 'GET_VERSION' && event.source) {
+    event.source.postMessage({ type: 'VERSION', cache: CACHE_NAME });
+  }
 });
 
 // Activate — clean old caches

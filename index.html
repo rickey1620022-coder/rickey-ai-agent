@@ -465,9 +465,30 @@
     background: var(--accent); border-color: var(--accent); color: #fff;
   }
   .photo-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-    gap: 10px; margin-bottom: 16px;
+    display: flex; flex-direction: column;
+    gap: 8px; margin-bottom: 16px;
   }
+  .photo-list-row {
+    display: flex; align-items: center; gap: 12px;
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 8px 10px; cursor: pointer; transition: all 0.15s;
+    background: var(--surface);
+  }
+  .photo-list-row:hover { border-color: var(--accent); background: var(--surface2); }
+  .photo-list-thumb {
+    width: 52px; height: 52px; min-width: 52px; border-radius: 8px;
+    object-fit: cover; border: 1px solid var(--border);
+  }
+  .photo-list-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .photo-list-cats { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+  .photo-list-tag { font-size: 0.72rem; color: var(--accent); font-weight: 600; }
+  .photo-list-date { font-size: 0.66rem; color: var(--muted); }
+  .photo-del-list {
+    width: 28px; height: 28px; min-width: 28px; border-radius: 50%;
+    border: 1px solid var(--border); background: var(--surface);
+    color: var(--accent3); cursor: pointer; font-size: 0.8rem;
+  }
+  .photo-del-list:hover { background: var(--accent3); color: #fff; }
   .photo-item {
     position: relative; border-radius: 10px; overflow: hidden;
     border: 1px solid var(--border); aspect-ratio: 1; cursor: pointer;
@@ -570,6 +591,37 @@
     white-space: nowrap;
   }
   .wa-send-now:hover { background: #1fae57; }
+
+  /* Front-page WhatsApp timer buttons */
+  .wa-front-btn {
+    display: flex; align-items: stretch; gap: 0;
+    border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden;
+    background: var(--surface);
+  }
+  .wa-front-btn.wa-front-top { border-color: #25d366; box-shadow: 0 2px 8px rgba(37,211,102,0.15); }
+  .wa-front-btn.due { border-color: #25d366; background: rgba(37,211,102,0.08); animation: waDueGlow 1.6s ease-in-out infinite; }
+  @keyframes waDueGlow { 0%,100%{box-shadow:0 0 0 1px #25d366} 50%{box-shadow:0 0 10px 1px rgba(37,211,102,0.5)} }
+  .wa-front-main {
+    flex: 1; text-align: left; background: none; border: none; cursor: pointer;
+    padding: 10px 14px; display: grid; gap: 2px; color: var(--text);
+    grid-template-columns: 1fr auto; align-items: center;
+  }
+  .wa-front-name { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.9rem; }
+  .wa-front-timer {
+    font-family: 'DM Mono', monospace; font-weight: 700; font-size: 0.85rem;
+    color: #1fae57; text-align: right; justify-self: end;
+  }
+  .wa-front-btn.due .wa-front-timer { color: #d8000c; }
+  .wa-front-msg { font-size: 0.74rem; color: var(--muted); grid-column: 1/2; }
+  .wa-front-when { font-size: 0.66rem; color: var(--muted); grid-column: 2/3; text-align: right; }
+  .wa-front-actions { display: flex; flex-direction: column; border-left: 1px solid var(--border); }
+  .wa-mini {
+    flex: 1; border: none; background: var(--surface2); cursor: pointer;
+    padding: 0 12px; font-size: 0.9rem; color: var(--text); transition: background 0.15s;
+  }
+  .wa-mini:hover { background: var(--border); }
+  .wa-mini-done { color: #1fae57; font-weight: 800; }
+  .wa-mini + .wa-mini { border-top: 1px solid var(--border); }
   .wa-sched-icon {
     width:36px; height:36px; min-width:36px; border-radius:10px;
     background:#e7fbe6; display:flex; align-items:center;
@@ -762,10 +814,19 @@
 </head>
 <body>
 
+<!-- Update-available banner (shown when a new version is ready) -->
+<div id="update-banner" style="display:none;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;padding:10px 16px;font-family:'Syne',sans-serif;">
+  <span style="font-weight:700;font-size:0.85rem;">🔄 A new version is available.</span>
+  <span style="display:flex;gap:8px;align-items:center;">
+    <button id="update-now-btn" onclick="doAppUpdate()" style="background:#fff;color:#7c3aed;border:none;border-radius:8px;padding:6px 14px;font-family:'Syne',sans-serif;font-weight:800;font-size:0.8rem;cursor:pointer;">Update now</button>
+    <button onclick="dismissUpdateBanner()" style="background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:8px;padding:6px 10px;font-weight:700;font-size:0.8rem;cursor:pointer;">Later</button>
+  </span>
+</div>
+
 <header class="header">
   <div>
     <div class="header-title">RICKEY <span>AI</span> AGENT</div>
-    <div id="app-version-line" style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v2.9.2</div>
+    <div id="app-version-line" style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v3.0.1</div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
     <button id="api-key-btn" onclick="openAPIKey()" style="display:flex;align-items:center;gap:6px;background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;">
@@ -851,6 +912,15 @@
 <!-- ========== TASKS TAB (To-Do + Reminders merged, no AI) ========== -->
 <div class="tab active" id="tab-todo">
 
+  <!-- ===== SCHEDULED WHATSAPP TIMER BUTTONS (front page) ===== -->
+  <div class="panel" id="wa-front-panel" style="display:none;border-color:rgba(37,211,102,0.3);background:rgba(37,211,102,0.05);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div class="panel-title" style="margin-bottom:0;">💬 Scheduled WhatsApp</div>
+      <span id="wa-front-queue" style="font-size:0.72rem;color:var(--muted);"></span>
+    </div>
+    <div id="wa-front-buttons" style="display:flex;flex-direction:column;gap:8px;"></div>
+  </div>
+
   <!-- ===== SIMPLE TO-DO ===== -->
   <div class="panel">
     <div class="panel-title">✅ My To-Do List</div>
@@ -932,12 +1002,13 @@
       <button class="btn btn-accent" onclick="aiSaveNote()">💾 Save Note</button>
       <button class="btn btn-blue" onclick="openAddNote()">+ Add Manually</button>
     </div>
-  AI is processing note...
+    <div class="ai-thinking" id="note-thinking">
+      <div class="dots"><span></span><span></span><span></span></div> AI is processing note...
     </div>
   </div>
 
   <div class="search-bar">
-    <input type="text" id="note-search" placeholder="🔍 Search notes by title, tag, or content..." oninput="searchNotes()" />
+    <input type="text" id="note-search" placeholder="🔍 Search notes by category, tag, or word..." oninput="searchNotes()" />
   </div>
 
   <!-- PHOTOS SECTION -->
@@ -1465,14 +1536,10 @@
       <input class="form-input" id="m-rem-name" placeholder="e.g. Mehta Traders" />
     </div>
     <div class="form-group">
-      <label class="form-label">Category</label>
-      <select class="form-select" id="m-rem-type">
-        <option value="call">📞 Call (date &amp; time)</option>
-        <option value="payment_recv">💰 Payment received call</option>
-        <option value="payment_make">💸 Make payment call</option>
-        <option value="bill">🧾 Bill last-date reminder</option>
-        <option value="followup">🔄 Follow-up call for order</option>
-      </select>
+      <label class="form-label">Category — pick or type a new one</label>
+      <input class="form-input" id="m-rem-type" list="rem-cat-options" placeholder="Start typing… e.g. Call, Make payment, GST filing" autocomplete="off" />
+      <datalist id="rem-cat-options"></datalist>
+      <div style="font-size:0.7rem;color:var(--muted);margin-top:4px;">Type a new category and it's saved automatically for next time.</div>
     </div>
     <div class="form-group">
       <label class="form-label">Amount (₹) — optional</label>
@@ -1707,6 +1774,8 @@ function openAddReminder() {
   document.getElementById('m-rem-note').value = '';
   document.getElementById('m-rem-date').value = new Date().toISOString().split('T')[0];
   document.getElementById('m-rem-time').value = '';
+  populateRemCatDatalist();
+  document.getElementById('m-rem-type').value = 'Call';
   document.getElementById('modal-reminder').classList.add('show');
 }
 function openAddNote() { document.getElementById('modal-note').classList.add('show'); }
@@ -1907,7 +1976,7 @@ function addReminderManual() {
   const newRem = {
     id: uid(),
     name,
-    type: document.getElementById('m-rem-type').value,
+    type: resolveRemType(document.getElementById('m-rem-type').value),
     amount: document.getElementById('m-rem-amount').value || null,
     dueDate: document.getElementById('m-rem-date').value || null,
     callTime: document.getElementById('m-rem-time').value || null,
@@ -1946,21 +2015,58 @@ function getDueClass(dueDate) {
   return { cls: 'due-ok', label: due.toLocaleDateString('en-IN', {day:'numeric',month:'short'}) };
 }
 
-// Reminder categories (the 5 requested) + legacy fallbacks
+// Built-in reminder categories (suggested) + legacy fallbacks
 const REM_CATS = {
   call:         { icon:'📞', label:'Call',                  cal:'📞 Call: ' },
   payment_recv: { icon:'💰', label:'Payment received call', cal:'💰 Payment received: ' },
   payment_make: { icon:'💸', label:'Make payment call',     cal:'💸 Make payment: ' },
   bill:         { icon:'🧾', label:'Bill last-date',        cal:'🧾 Bill due: ' },
   followup:     { icon:'🔄', label:'Follow-up for order',   cal:'🔄 Follow-up: ' },
-  // legacy data from older versions
   payment:      { icon:'💰', label:'Payment',               cal:'💰 Payment: ' },
   sales:        { icon:'📦', label:'Sales follow-up',       cal:'📦 Sales: ' },
 };
-function remCat(t) { return REM_CATS[t] || REM_CATS.call; }
+// User-added custom categories (saved)
+let remCustomCats = JSON.parse(localStorage.getItem('rickey_rem_cats') || '[]');
 
-function typeIcon(type) {
-  return remCat(type).icon;
+function remCat(t) {
+  if (REM_CATS[t]) return REM_CATS[t];
+  if (t) return { icon:'🏷️', label: t, cal: '🏷️ ' + t + ': ' };
+  return REM_CATS.call;
+}
+
+// Suggestion list = built-in labels + custom ones
+function allRemCatLabels() {
+  const builtin = ['Call','Payment received call','Make payment call','Bill last-date reminder','Follow-up call for order'];
+  return [...new Set([...builtin, ...remCustomCats])];
+}
+
+function populateRemCatDatalist() {
+  const dl = document.getElementById('rem-cat-options');
+  if (!dl) return;
+  dl.innerHTML = allRemCatLabels().map(c => `<option value="${c}">`).join('');
+}
+
+function typeIcon(type) { return remCat(type).icon; }
+
+// Map a typed category label back to a built-in key, or keep it as a custom label.
+function resolveRemType(input) {
+  const v = (input || '').trim();
+  if (!v) return 'call';
+  const lower = v.toLowerCase();
+  const map = {
+    'call': 'call',
+    'payment received call': 'payment_recv', 'payment received': 'payment_recv',
+    'make payment call': 'payment_make', 'make payment': 'payment_make',
+    'bill last-date reminder': 'bill', 'bill last date reminder': 'bill', 'bill': 'bill',
+    'follow-up call for order': 'followup', 'follow up call for order': 'followup', 'follow-up': 'followup', 'followup': 'followup',
+  };
+  if (map[lower]) return map[lower];
+  // It's a custom category — save the label if new, use the label itself as the type
+  if (!remCustomCats.includes(v)) {
+    remCustomCats.push(v);
+    localStorage.setItem('rickey_rem_cats', JSON.stringify(remCustomCats));
+  }
+  return v;
 }
 
 function renderReminders() {
@@ -2148,21 +2254,34 @@ function searchNotes() {
 
 function renderNotes(filter = '') {
   const grid = document.getElementById('notes-grid');
-  let list = filter
-    ? notes.filter(n => n.title.toLowerCase().includes(filter) || n.body.toLowerCase().includes(filter) || n.tags.some(t => t.includes(filter)))
-    : notes;
+  if (!grid) return;
+  const q = (filter || '').trim().toLowerCase();
 
-  if (!list.length) {
-    grid.innerHTML = `<div class="empty"><div class="big">📒</div>${filter ? 'No notes match your search' : 'No notes yet'}</div>`;
+  // Don't show notes until the user searches
+  if (!q) {
+    grid.innerHTML = `<div class="empty"><div class="big">🔎</div>${notes.length} note(s) saved — search by tag, category or word to view them</div>`;
     return;
   }
 
-  grid.innerHTML = list.map(n => `
+  const list = notes.filter(n =>
+    n.title.toLowerCase().includes(q) ||
+    n.body.toLowerCase().includes(q) ||
+    (n.category || '').toLowerCase().includes(q) ||
+    (n.tags || []).some(t => t.toLowerCase().includes(q))
+  );
+
+  if (!list.length) {
+    grid.innerHTML = `<div class="empty"><div class="big">📒</div>No notes match "${q}"</div>`;
+    return;
+  }
+
+  grid.innerHTML = `<div style="font-size:0.74rem;color:var(--muted);margin-bottom:8px;">${list.length} note(s) match "${q}"</div>` + list.map(n => `
     <div class="note-card" onclick="openNote('${n.id}')">
       <div class="note-card-title">${n.title}</div>
       <div class="note-card-body">${n.summary || n.body.slice(0, 120)}${n.body.length > 120 ? '...' : ''}</div>
       <div class="note-card-footer">
-        ${n.tags.map(t => `<span class="tag tag-cat">#${t}</span>`).join('')}
+        ${n.category ? `<span class="tag tag-cat">📁 ${n.category}</span>` : ''}
+        ${(n.tags || []).map(t => `<span class="tag tag-cat">#${t}</span>`).join('')}
         <span class="note-card-date">${new Date(n.created).toLocaleDateString('en-IN', {day:'numeric',month:'short'})}</span>
       </div>
     </div>
@@ -2313,53 +2432,58 @@ function renderPhotos() {
     });
   }
 
-  // ===== TWO-WAY SEARCH =====
-  // 1) Category filter (dropdown). 2) Tag filter (search box + active chip).
-  // Each works alone; together they AND. Category-only shows everything in that category.
-  let filtered = photos.filter(p => {
-    const cat = p.category || 'uncategorized';
-    const catOk = activePhotoCat === 'all' || cat === activePhotoCat;
+  // ===== SEARCH-ONLY: don't show photos until the user searches =====
+  const isSearching = activePhotoCat !== 'all' || activePhotoTag !== 'all' || !!tagQuery;
 
-    const chipOk = activePhotoTag === 'all' || (p.tags || []).includes(activePhotoTag);
-
-    const searchOk = !tagQuery
-      || (p.tags || []).some(t => t.includes(tagQuery))
-      || cat.includes(tagQuery);
-
-    return catOk && chipOk && searchOk;
-  });
-
-  // Result count line
-  const countEl = document.getElementById('photo-result-count');
-  if (countEl) {
-    const filtering = activePhotoCat !== 'all' || activePhotoTag !== 'all' || tagQuery;
-    if (filtering) {
-      countEl.style.display = 'block';
-      const parts = [];
-      if (activePhotoCat !== 'all') parts.push(`category "${activePhotoCat}"`);
-      if (activePhotoTag !== 'all') parts.push(`tag #${activePhotoTag}`);
-      if (tagQuery) parts.push(`"${tagQuery}"`);
-      countEl.textContent = `${filtered.length} photo(s) — ${parts.join(' + ')}`;
-    } else {
-      countEl.style.display = 'none';
+  if (!isSearching) {
+    const countEl0 = document.getElementById('photo-result-count');
+    if (countEl0) {
+      countEl0.style.display = 'block';
+      countEl0.textContent = `${photos.length} photo(s) saved — search by category or tag to view them`;
     }
-  }
-
-  if (!filtered.length) {
-    const msg = (activePhotoCat !== 'all' || activePhotoTag !== 'all' || tagQuery)
-      ? 'No photos match this search'
-      : 'Tap Camera or Gallery to add photos';
-    grid.innerHTML = `<div class="empty" style="grid-column:1/-1;padding:20px 0;"><div class="big">📷</div>${msg}</div>`;
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1;padding:20px 0;"><div class="big">🔎</div>Pick a category or type a tag to see matching photos</div>`;
     return;
   }
 
+  // TWO-WAY SEARCH: category (dropdown/chip) AND tag text — each works alone.
+  let filtered = photos.filter(p => {
+    const cat = p.category || 'uncategorized';
+    const catOk = activePhotoCat === 'all' || cat === activePhotoCat;
+    const chipOk = activePhotoTag === 'all' || (p.tags || []).includes(activePhotoTag);
+    const searchOk = !tagQuery
+      || (p.tags || []).some(t => t.includes(tagQuery))
+      || cat.includes(tagQuery);
+    return catOk && chipOk && searchOk;
+  });
+
+  const countEl = document.getElementById('photo-result-count');
+  if (countEl) {
+    countEl.style.display = 'block';
+    const parts = [];
+    if (activePhotoCat !== 'all') parts.push(`category "${activePhotoCat}"`);
+    if (activePhotoTag !== 'all') parts.push(`tag #${activePhotoTag}`);
+    if (tagQuery) parts.push(`"${tagQuery}"`);
+    countEl.textContent = `${filtered.length} photo(s) — ${parts.join(' + ')}`;
+  }
+
+  if (!filtered.length) {
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1;padding:20px 0;"><div class="big">📷</div>No photos match this search</div>`;
+    return;
+  }
+
+  // LIST FORM: thumbnail + category + tags per row
   grid.innerHTML = filtered.map(p => {
     const cat = p.category && p.category !== 'uncategorized' ? `<span class="photo-cat-badge">📁 ${p.category}</span>` : '';
+    const tags = (p.tags || []).map(t => `<span class="photo-list-tag">#${t}</span>`).join('');
+    const date = p.created ? new Date(p.created).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '';
     return `
-    <div class="photo-item" onclick="openLightbox('${p.id}')">
-      <img src="${p.src}" alt="photo" loading="lazy" />
-      <div class="photo-item-tags">${cat}${(p.tags||[]).map(t=>`<span class="photo-item-tag">#${t}</span>`).join('')}</div>
-      <button class="photo-del" onclick="event.stopPropagation();deletePhoto('${p.id}')">✕</button>
+    <div class="photo-list-row" onclick="openLightbox('${p.id}')">
+      <img src="${p.src}" alt="photo" loading="lazy" class="photo-list-thumb" />
+      <div class="photo-list-info">
+        <div class="photo-list-cats">${cat}${tags || '<span class="photo-list-tag" style="opacity:.6">no tags</span>'}</div>
+        <div class="photo-list-date">${date}</div>
+      </div>
+      <button class="photo-del-list" onclick="event.stopPropagation();deletePhoto('${p.id}')">✕</button>
     </div>`;
   }).join('');
 }
@@ -2810,7 +2934,7 @@ function sendScheduledNow(id) {
   entry.due = false;
   saveWAScheduled();
   renderWAScheduled();
-  showToast(`📲 Opened WhatsApp for ${entry.name}`);
+  showToast(`📲 Opened WhatsApp for ${entry.name} — tap ✓ when done`);
 }
 
 function deleteWASched(id) {
@@ -2821,52 +2945,163 @@ function deleteWASched(id) {
   renderWAScheduled();
 }
 
+// Mark a scheduled message as DONE (ticked) → remove from system entirely
+function markWADone(id) {
+  clearTimeout(waScheduleTimers[id]);
+  delete waScheduleTimers[id];
+  waScheduled = waScheduled.filter(e => e.id !== id);
+  saveWAScheduled();
+  renderWAScheduled();
+  renderWAFront();
+  showToast('✅ WhatsApp done — removed');
+}
+
+// Live countdown text for a future time
+function countdownText(ms) {
+  if (ms <= 0) return 'now';
+  const s = Math.floor(ms / 1000);
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${sec}s`;
+  return `${sec}s`;
+}
+
+// FRONT PAGE: show scheduled WhatsApp as timer buttons.
+// 2 soonest on top, next 4 below (6 total). Rest go to the queue in the WA tab.
+function renderWAFront() {
+  const panel = document.getElementById('wa-front-panel');
+  const wrap = document.getElementById('wa-front-buttons');
+  const queueLbl = document.getElementById('wa-front-queue');
+  if (!panel || !wrap) return;
+
+  const active = waScheduled.filter(e => !e.fired).sort((a, b) => a.sendAt - b.sendAt);
+  if (!active.length) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+
+  const front = active.slice(0, 6);
+  const queued = active.length - front.length;
+  queueLbl.textContent = queued > 0 ? `+${queued} more in WhatsApp queue` : '';
+
+  const now = Date.now();
+  wrap.innerHTML = front.map((e, i) => {
+    const due = e.sendAt <= now || e.due;
+    const topClass = i < 2 ? 'wa-front-top' : '';
+    const cd = due ? 'READY' : countdownText(e.sendAt - now);
+    const timeStr = new Date(e.sendAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true });
+    return `
+      <div class="wa-front-btn ${topClass} ${due ? 'due' : ''}" data-id="${e.id}" data-at="${e.sendAt}">
+        <button class="wa-front-main" onclick="sendScheduledNow('${e.id}')">
+          <span class="wa-front-name">📱 ${e.name || e.phone}</span>
+          <span class="wa-front-timer">${due ? '🔔 ' : '⏰ '}<span class="wa-cd">${cd}</span></span>
+          <span class="wa-front-msg">${e.message.slice(0, 40)}${e.message.length > 40 ? '…' : ''}</span>
+          <span class="wa-front-when">${timeStr}</span>
+        </button>
+        <div class="wa-front-actions">
+          <button class="wa-mini" onclick="editWASched('${e.id}')" title="Edit">✏️</button>
+          <button class="wa-mini wa-mini-done" onclick="markWADone('${e.id}')" title="Mark done & remove">✓</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// Tick all visible countdowns every second (cheap text update, no re-render)
+let waCdInterval = null;
+function startWACountdown() {
+  if (waCdInterval) clearInterval(waCdInterval);
+  waCdInterval = setInterval(() => {
+    const now = Date.now();
+    let needFullRender = false;
+    document.querySelectorAll('#wa-front-buttons .wa-front-btn').forEach(el => {
+      const at = parseInt(el.getAttribute('data-at'), 10);
+      const cdEl = el.querySelector('.wa-cd');
+      if (!cdEl) return;
+      if (at <= now) {
+        if (!el.classList.contains('due')) { el.classList.add('due'); needFullRender = true; }
+        cdEl.textContent = 'READY';
+      } else {
+        cdEl.textContent = countdownText(at - now);
+      }
+    });
+    if (needFullRender) renderWAFront();
+  }, 1000);
+}
+
+// Open the editor for a scheduled message (jump to WA tab, prefill, remove old)
+function editWASched(id) {
+  const e = waScheduled.find(x => x.id === id);
+  if (!e) return;
+  switchTab('whatsapp', document.querySelector('.nav-btn'));
+  const setVal = (elid, v) => { const el = document.getElementById(elid); if (el) el.value = v; };
+  setVal('wa-contact-phone', e.phone);
+  setVal('wa-contact-name', e.name);
+  setVal('wa-ai-prompt', e.message);
+  waCurrentMsg = e.message;
+  const d = new Date(e.sendAt);
+  setVal('wa-sched-date', d.toISOString().split('T')[0]);
+  setVal('wa-sched-time', d.toTimeString().slice(0,5));
+  const area = document.getElementById('wa-schedule-area');
+  if (area) area.style.display = 'block';
+  // remove the old one so re-scheduling replaces it
+  deleteWASched(id);
+  showToast('✏️ Editing — change details and Schedule again');
+}
+
 function renderWAScheduled() {
   const list = document.getElementById('wa-scheduled-list');
   const pending = waScheduled.filter(e => !e.fired);
-  const dueCount = waScheduled.filter(e => e.due && !e.fired).length;
-  document.getElementById('wa-sched-count').textContent = `${pending.length} pending` + (dueCount ? ` • ${dueCount} ready` : '');
-  document.getElementById('wa-badge').textContent = pending.length;
+  const dueCount = waScheduled.filter(e => (e.due || e.sendAt <= Date.now()) && !e.fired).length;
+  const countEl = document.getElementById('wa-sched-count');
+  if (countEl) countEl.textContent = `${pending.length} scheduled` + (dueCount ? ` • ${dueCount} ready` : '');
+  const badge = document.getElementById('wa-badge');
+  if (badge) badge.textContent = pending.length;
 
+  renderWAFront();
+
+  if (!list) return;
   if (!waScheduled.length) {
     list.innerHTML = '<div class="empty" style="padding:16px 0;"><div class="big" style="font-size:1.5rem;">📭</div>No scheduled messages</div>';
     return;
   }
 
-  // Order: due first, then upcoming by time, then sent
-  const ordered = [...waScheduled].sort((a,b) => {
-    const rank = e => e.fired ? 2 : (e.due ? 0 : 1);
+  // WA-tab list: full queue, soonest first (this is where 7th+ live as "queue")
+  const ordered = [...waScheduled].sort((a, b) => {
+    const rank = e => e.fired ? 2 : ((e.due || e.sendAt <= Date.now()) ? 0 : 1);
     if (rank(a) !== rank(b)) return rank(a) - rank(b);
     return a.sendAt - b.sendAt;
   });
 
-  list.innerHTML = ordered.map(e => {
+  list.innerHTML = ordered.map((e, idx) => {
     const dt = new Date(e.sendAt);
     const dtStr = dt.toLocaleDateString('en-IN',{day:'numeric',month:'short'}) + ' ' + formatTime12(dt.toTimeString().slice(0,5));
+    const due = (e.due || e.sendAt <= Date.now()) && !e.fired;
     let stateCls = '', timeLine, actionBtn;
+    const queuePos = !e.fired && idx >= 6 ? `<span style="font-size:0.62rem;color:var(--muted);"> (queue #${idx-5})</span>` : '';
     if (e.fired) {
-      stateCls = 'fired';
-      timeLine = '✅ Sent';
+      stateCls = 'fired'; timeLine = '✅ Sent';
       actionBtn = `<button class="btn-ghost btn-sm" style="color:#25d366;border-color:#25d366;" onclick="sendScheduledNow('${e.id}')" title="Send again">↻</button>`;
-    } else if (e.due) {
-      stateCls = 'due';
-      timeLine = '🔔 Ready to send now';
+    } else if (due) {
+      stateCls = 'due'; timeLine = '🔔 Ready to send now';
       actionBtn = `<button class="btn btn-sm wa-send-now" onclick="sendScheduledNow('${e.id}')">📲 Send Now</button>`;
     } else {
-      timeLine = '⏰ ' + dtStr;
+      timeLine = '⏰ ' + dtStr + ' • in ' + countdownText(e.sendAt - Date.now());
       actionBtn = `<button class="btn-ghost btn-sm" style="color:#25d366;border-color:#25d366;" onclick="sendScheduledNow('${e.id}')" title="Send early">📲</button>`;
     }
     return `
     <div class="wa-sched-item ${stateCls}">
-      <div class="wa-sched-icon">${e.due && !e.fired ? '🔔' : '💬'}</div>
+      <div class="wa-sched-icon">${due ? '🔔' : '💬'}</div>
       <div class="wa-sched-body">
-        <div class="wa-sched-to">📱 ${e.name || e.phone}</div>
+        <div class="wa-sched-to">📱 ${e.name || e.phone}${queuePos}</div>
         <div class="wa-sched-msg">${e.message}</div>
         <div class="wa-sched-time">${timeLine}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;">
         ${actionBtn}
-        <button class="btn-ghost btn-sm" onclick="deleteWASched('${e.id}')" style="border-color:rgba(255,107,107,0.3);color:var(--accent3)">✕</button>
+        <button class="wa-mini" onclick="editWASched('${e.id}')" title="Edit">✏️</button>
+        <button class="btn-ghost btn-sm" onclick="markWADone('${e.id}')" title="Mark done & remove" style="color:#25d366;">✓</button>
       </div>
     </div>`;
   }).join('');
@@ -2881,11 +3116,10 @@ function bootWATimers() {
   });
   if (waScheduled.some(e => e.due && !e.fired)) { saveWAScheduled(); }
   renderWAScheduled();
-  // Re-check every 30s in case a timer was throttled while backgrounded
+  startWACountdown();
   setInterval(() => {
-    let changed = false;
     waScheduled.forEach(e => {
-      if (!e.fired && !e.due && e.sendAt <= Date.now()) { markDue(e.id); changed = true; }
+      if (!e.fired && !e.due && e.sendAt <= Date.now()) { markDue(e.id); }
     });
   }, 30000);
 }
@@ -3303,8 +3537,8 @@ function showRates(data) {
 // INIT
 // ============================================================
 // App version + build stamp (shown small under the title)
-const APP_VERSION = 'v2.9.2';
-const APP_BUILD = '2026-06-01 23:00 IST';
+const APP_VERSION = 'v3.0.1';
+const APP_BUILD = '2026-06-02 01:30 IST';
 (function showVersion(){
   const el = document.getElementById('app-version-line');
   if (el) el.textContent = APP_VERSION + ' • ' + APP_BUILD;
@@ -3808,10 +4042,85 @@ const _origRenderWASched   = renderWAScheduled; renderWAScheduled = (...a) => { 
 // ============================================================
 // SERVICE WORKER — PWA offline cache
 // ============================================================
+let waitingWorker = null;
+let swRefreshing = false;
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js', { scope: './' })
-    .then(() => console.log('✅ PWA Service Worker ready'))
+    .then(reg => {
+      console.log('✅ PWA Service Worker ready');
+
+      // If one is already waiting (update downloaded last time), offer it now.
+      if (reg.waiting && navigator.serviceWorker.controller) {
+        waitingWorker = reg.waiting;
+        showUpdateBanner();
+      }
+
+      // A new version started installing — when ready, show the banner.
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', () => {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+            waitingWorker = nw;
+            showUpdateBanner();
+          }
+        });
+      });
+
+      // Check for updates now and every 30 min while the app stays open.
+      reg.update();
+      setInterval(() => reg.update(), 30 * 60 * 1000);
+    })
     .catch(e => console.log('SW skipped:', e.message));
+
+  // When the new worker takes control, reload once to load fresh code.
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (swRefreshing) return;
+    swRefreshing = true;
+    location.reload();
+  });
+}
+
+function showUpdateBanner() {
+  const banner = document.getElementById('update-banner');
+  if (banner) banner.style.display = 'flex';
+}
+
+function dismissUpdateBanner() {
+  const banner = document.getElementById('update-banner');
+  if (banner) banner.style.display = 'none';
+}
+
+// Tapping "Update": back up to Drive first (best-effort), then activate + reload.
+async function doAppUpdate() {
+  const btn = document.getElementById('update-now-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Backing up…'; }
+
+  // 1) Try to auto-backup data to Google Drive before updating.
+  let backedUp = false;
+  try {
+    if (typeof gAccessToken !== 'undefined' && gAccessToken && typeof backupToDrive === 'function') {
+      await backupToDrive(true);   // silent mode
+      backedUp = true;
+    }
+  } catch (e) { /* fall through to local export */ }
+
+  // 2) If Drive wasn't available, download a local JSON backup as a safety net.
+  if (!backedUp) {
+    try { if (typeof exportAllData === 'function') exportAllData(); } catch (e) {}
+  }
+
+  if (btn) btn.textContent = 'Updating…';
+
+  // 3) Activate the new service worker; controllerchange handler reloads us.
+  if (waitingWorker) {
+    waitingWorker.postMessage('SKIP_WAITING');
+  } else {
+    location.reload();
+  }
+  // Safety: if nothing happened in 4s, force reload.
+  setTimeout(() => { if (!swRefreshing) location.reload(); }, 4000);
 }
 
 // ============================================================
