@@ -9,6 +9,27 @@ shown in small text under the title in the app header.
 
 ---
 
+## v3.1.1 — 2026-06-13 12:30 IST
+**Source file:** `versions/rickey-ai-agent-v3.1.1.html`
+
+Two fixes from the latest screenshot.
+
+- **NALCO stale-rate fix.** The app was still showing the 27-May ₹4,14,063
+  because the OLD worker code was deployed and the phone's cache held the old
+  value. The new code (a) busts both Cloudflare and browser caches with a
+  fresh-timestamp query and `no-store`, (b) shortened the worker cache to 5
+  minutes, and (c) re-fetches on every app load (cache is preview-only).
+  Once the new worker is deployed, the latest published NALCO circular
+  (currently 10-06-2026, ₹4,02,350/MT) shows immediately.
+- **LME is now its own NALCO-style card showing ₹/kg only.** No USD anywhere
+  on the rate strip. The LME card has its own blue gradient, the same layout
+  as NALCO, and shows the converted ₹/kg figure with the daily ▲/▼ change.
+  If the live USD-INR feed is briefly unavailable, the card still shows ₹/kg
+  using an approximate FX rate (clearly marked "approx"), so it never just
+  disappears.
+- Chart now plots LME in ₹/kg (matching the card), not USD/t.
+- Worker cache: 10 min → 5 min. PWA cache: `rickey-ai-v19`.
+
 ## v3.1.0 — 2026-06-13 11:00 IST
 **Source file:** `versions/rickey-ai-agent-v3.1.0.html`
 

@@ -826,7 +826,7 @@
 <header class="header">
   <div>
     <div class="header-title">RICKEY <span>AI</span> AGENT</div>
-    <div id="app-version-line" style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v3.1.0</div>
+    <div id="app-version-line" style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v3.1.1</div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
     <button id="api-key-btn" onclick="openAPIKey()" style="display:flex;align-items:center;gap:6px;background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;">
@@ -862,32 +862,17 @@
 
 <!-- ===== RATES BAR (centered, above tabs) ===== -->
 <div class="rates-bar">
-  <!-- ALUMINIUM RATE CARDS (hidden until loaded) -->
+  <!-- NALCO RATE CARD -->
   <div id="nalco-card" style="display:none;padding:12px 16px;border-radius:12px;background:linear-gradient(135deg, rgba(124,58,237,0.12), rgba(37,99,235,0.07));border:1.5px solid rgba(124,58,237,0.28);">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-      <div style="display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap;flex:1;">
-        <!-- NALCO -->
-        <div id="nalco-block" style="display:none;align-items:center;gap:10px;">
-          <span style="font-size:1.5rem;">🏭</span>
-          <div>
-            <span style="font-size:0.62rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;">NALCO Aluminium Ingot</span>
-            <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
-              <span id="nalco-price" style="font-size:1.4rem;font-weight:800;font-family:'Syne',sans-serif;color:var(--accent);line-height:1.1;">—</span>
-            </div>
-            <div id="nalco-meta" style="font-size:0.64rem;color:var(--muted);"></div>
+      <div id="nalco-block" style="display:none;align-items:center;gap:10px;">
+        <span style="font-size:1.5rem;">🏭</span>
+        <div>
+          <span style="font-size:0.62rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;">NALCO Aluminium Ingot</span>
+          <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
+            <span id="nalco-price" style="font-size:1.4rem;font-weight:800;font-family:'Syne',sans-serif;color:var(--accent);line-height:1.1;">—</span>
           </div>
-        </div>
-        <!-- LME -->
-        <div id="lme-block" style="display:none;align-items:center;gap:10px;border-left:1px solid var(--border);padding-left:18px;">
-          <span style="font-size:1.5rem;">🌍</span>
-          <div>
-            <span style="font-size:0.62rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;">LME Aluminium (3-mo)</span>
-            <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
-              <span id="lme-price" style="font-size:1.4rem;font-weight:800;font-family:'Syne',sans-serif;color:#2563eb;line-height:1.1;">—</span>
-              <span id="lme-change" style="font-size:0.78rem;font-weight:700;font-family:'DM Mono',monospace;"></span>
-            </div>
-            <div id="lme-meta" style="font-size:0.64rem;color:var(--muted);"></div>
-          </div>
+          <div id="nalco-meta" style="font-size:0.64rem;color:var(--muted);"></div>
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;">
@@ -895,11 +880,28 @@
         <button class="btn-ghost btn-sm" onclick="toggleRateChart()" title="Show price chart" style="font-size:0.68rem;padding:5px 10px;">📈 Chart</button>
       </div>
     </div>
-    <!-- Chart (collapsible) -->
+    <!-- Chart (collapsible) — placed inside NALCO card so it sits with the rates -->
     <div id="rate-chart-wrap" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:10px;">
       <div style="font-size:0.62rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;margin-bottom:6px;">📊 Recent Price Changes (last 10)</div>
       <div id="rate-chart-svg"></div>
       <div id="rate-chart-legend" style="display:flex;gap:14px;font-size:0.7rem;margin-top:6px;flex-wrap:wrap;"></div>
+    </div>
+  </div>
+
+  <!-- LME RATE CARD — own NALCO-style card showing ₹/kg only -->
+  <div id="lme-card" style="display:none;padding:12px 16px;border-radius:12px;background:linear-gradient(135deg, rgba(37,99,235,0.12), rgba(14,165,233,0.07));border:1.5px solid rgba(37,99,235,0.28);">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+      <div id="lme-block" style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:1.5rem;">🌍</span>
+        <div>
+          <span style="font-size:0.62rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;">LME Aluminium (3-mo)</span>
+          <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
+            <span id="lme-price" style="font-size:1.4rem;font-weight:800;font-family:'Syne',sans-serif;color:#2563eb;line-height:1.1;">—</span>
+            <span id="lme-change" style="font-size:0.78rem;font-weight:700;font-family:'DM Mono',monospace;"></span>
+          </div>
+          <div id="lme-meta" style="font-size:0.64rem;color:var(--muted);"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -3498,8 +3500,7 @@ async function loadRates(manual) {
   const card = document.getElementById('nalco-card');
   if (!card) return;
 
-  // Show cached rates instantly while we fetch a fresh copy in the background.
-  // (Don't trust the cache as the "freshness check" — only the server data is trusted.)
+  // Show cached rates instantly as a preview (do not skip the network call).
   try {
     const cached = JSON.parse(localStorage.getItem('rickey_rates_cache') || 'null');
     if (cached) showRates(cached);
@@ -3512,12 +3513,12 @@ async function loadRates(manual) {
 
   try {
     const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), 12000);
+    const t = setTimeout(() => controller.abort(), 14000);
     let endpoint;
     if (/script\.google\.com/.test(base) || /\/exec$/.test(base)) {
       endpoint = base + (base.includes('?') ? '&' : '?') + 'path=rates&_=' + Date.now();
     } else {
-      endpoint = base + '/rates?_=' + Date.now();  // cache-buster so we always see fresh
+      endpoint = base + '/rates?_=' + Date.now();  // cache-buster
     }
     const res = await fetch(endpoint, { signal: controller.signal, cache: 'no-store' });
     clearTimeout(t);
@@ -3527,10 +3528,14 @@ async function loadRates(manual) {
     data.fetched = new Date().toISOString();
     data.fetchedDay = new Date().toDateString();
     try { localStorage.setItem('rickey_rates_cache', JSON.stringify(data)); } catch (e) {}
-    // Record price history — only stores a new entry when the rate actually changed
     recordRateHistory(data);
     showRates(data);
-    if (manual) showToast('✅ Rates updated');
+    if (manual) {
+      const bits = [];
+      if (data.nalco) bits.push('NALCO ₹' + Number(data.nalco.perMT).toLocaleString('en-IN') + '/MT (' + (data.nalco.date||'') + ')');
+      if (data.lme) bits.push('LME ' + data.lme.perTonneUsd + ' USD/t');
+      showToast('✅ Rates updated — ' + bits.join(' • '));
+    }
   } catch (e) {
     if (manual) showToast('Could not fetch rates right now');
   }
@@ -3551,21 +3556,28 @@ function recordRateHistory(data) {
     if (value == null) return;
     h[key] = h[key] || [];
     const last = h[key][h[key].length - 1];
-    // Only add a new point when the value actually changes (or label/date changes)
     if (!last || last.value !== value || last.label !== label) {
       h[key].push({ at: now, value, label });
       if (h[key].length > 10) h[key] = h[key].slice(-10);
     }
   };
   if (data.nalco && data.nalco.perMT) push('nalco', data.nalco.perMT, data.nalco.date || '');
-  if (data.lme && data.lme.perTonneUsd) push('lme', data.lme.perTonneUsd, 'USD/t');
+  if (data.lme && data.lme.perTonneUsd) {
+    // Record LME in INR/kg so the chart matches what the user sees on the card
+    let inrKg = data.lme.perKgInr;
+    if (!inrKg) {
+      const fx = (data.fx && data.fx.usdInr) || 86.5;
+      inrKg = Math.round(data.lme.perTonneUsd * fx / 1000 * 100) / 100;
+    }
+    push('lme', inrKg, '₹/kg');
+  }
   saveRateHistory(h);
 }
 
 function showRates(data) {
-  const card = document.getElementById('nalco-card');
-  if (!card) return;
-  let shown = false;
+  const nalcoCard = document.getElementById('nalco-card');
+  const lmeCard = document.getElementById('lme-card');
+  if (!nalcoCard || !lmeCard) return;
   const when = (() => { try { return ' • upd ' + new Date(data.fetched).toLocaleDateString('en-IN',{day:'numeric',month:'short'}); } catch(e){ return ''; } })();
 
   // ----- NALCO -----
@@ -3574,38 +3586,38 @@ function showRates(data) {
     document.getElementById('nalco-price').textContent = '₹' + Number(data.nalco.perMT).toLocaleString('en-IN') + '/MT';
     const kg = data.nalco.perKg || (data.nalco.perMT / 1000);
     document.getElementById('nalco-meta').textContent = 'IE07 • ' + (data.nalco.date || '') + ' • ≈₹' + Number(kg).toLocaleString('en-IN',{maximumFractionDigits:2}) + '/kg' + when;
-    nBlock.style.display = 'flex'; shown = true;
-  } else { nBlock.style.display = 'none'; }
+    nBlock.style.display = 'flex';
+    nalcoCard.style.display = 'block';
+  } else { nBlock.style.display = 'none'; nalcoCard.style.display = 'none'; }
 
-  // ----- LME -----
-  const lBlock = document.getElementById('lme-block');
+  // ----- LME (own card, ₹/kg only) -----
   if (data.lme && data.lme.perTonneUsd) {
     const usd = data.lme.perTonneUsd;
-    const inrKg = data.lme.perKgInr;
-    // Display: INR/kg if we have FX, else USD/MT
-    const priceEl = document.getElementById('lme-price');
-    if (inrKg) {
-      priceEl.textContent = '₹' + Number(inrKg).toLocaleString('en-IN',{maximumFractionDigits:2}) + '/kg';
-    } else {
-      priceEl.textContent = '$' + Number(usd).toLocaleString('en-US',{maximumFractionDigits:2}) + '/t';
+    // Prefer the worker's computed perKgInr; otherwise compute with FX; otherwise fallback ~86 INR/USD
+    let inrKg = data.lme.perKgInr;
+    let fxRate = data.fx && data.fx.usdInr;
+    let fxSource = 'live';
+    if (!inrKg) {
+      if (!fxRate) { fxRate = 86.5; fxSource = 'approx'; }
+      inrKg = Math.round(usd * fxRate / 1000 * 100) / 100;
     }
+    document.getElementById('lme-price').textContent = '₹' + Number(inrKg).toLocaleString('en-IN',{maximumFractionDigits:2}) + '/kg';
     const ch = data.lme.changePct;
     const chEl = document.getElementById('lme-change');
     if (ch != null && !isNaN(ch)) {
-      chEl.textContent = (ch >= 0 ? '▲ +' : '▼ ') + ch.toFixed(2) + '%';
+      chEl.textContent = (ch >= 0 ? '▲ +' : '▼ ') + Math.abs(ch).toFixed(2) + '%';
       chEl.style.color = ch >= 0 ? '#16a34a' : '#dc2626';
     } else { chEl.textContent = ''; }
-    const parts = [`$${usd.toFixed(2)}/t`];
-    if (data.fx && data.fx.usdInr) parts.push(`@ ₹${data.fx.usdInr}/USD`);
-    parts.push(data.lme.label || '3-mo Closing (day-delayed)');
-    document.getElementById('lme-meta').textContent = parts.join(' • ') + when;
-    lBlock.style.display = 'flex'; shown = true;
-  } else { lBlock.style.display = 'none'; }
-
-  card.style.display = shown ? 'block' : 'none';
+    const fxNote = fxSource === 'live' ? `@₹${fxRate}/USD` : `@₹${fxRate}/USD approx`;
+    document.getElementById('lme-meta').textContent = '3-mo Closing (day-delayed) • ' + fxNote + when;
+    lmeCard.style.display = 'block';
+  } else {
+    lmeCard.style.display = 'none';
+  }
 
   // Refresh chart if it's open
-  if (document.getElementById('rate-chart-wrap').style.display === 'block') {
+  const chartWrap = document.getElementById('rate-chart-wrap');
+  if (chartWrap && chartWrap.style.display === 'block') {
     renderRateChart();
   }
 }
@@ -3628,7 +3640,7 @@ function renderRateChart() {
 
   const series = [];
   if (h.nalco && h.nalco.length) series.push({ key:'nalco', name:'NALCO ₹/MT', color:'#7c3aed', points: h.nalco });
-  if (h.lme && h.lme.length)     series.push({ key:'lme',   name:'LME $/t',    color:'#2563eb', points: h.lme });
+  if (h.lme && h.lme.length)     series.push({ key:'lme',   name:'LME ₹/kg',   color:'#2563eb', points: h.lme });
 
   if (!series.length) {
     svgHost.innerHTML = '<div style="font-size:0.74rem;color:var(--muted);padding:14px 0;">No price changes tracked yet. The chart will fill in as rates update.</div>';
@@ -3667,14 +3679,14 @@ function renderRateChart() {
       const y = yFor(p.value);
       svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="${s.color}"/>`;
       if (i === n - 1) {
-        const txt = s.key === 'nalco' ? '₹' + Number(p.value).toLocaleString('en-IN') : '$' + p.value.toFixed(0);
+        const txt = s.key === 'nalco' ? '₹' + Number(p.value).toLocaleString('en-IN') : '₹' + p.value.toFixed(2);
         svg += `<text x="${(x - 4).toFixed(1)}" y="${(y - 6).toFixed(1)}" font-size="9" font-family="DM Mono,monospace" fill="${s.color}" text-anchor="end">${txt}</text>`;
       }
     });
     // y-axis labels (left side, only for first series)
     if (sIdx === 0) {
-      const lblMin = s.key === 'nalco' ? '₹' + (min/1000).toFixed(0) + 'k' : '$' + min.toFixed(0);
-      const lblMax = s.key === 'nalco' ? '₹' + (max/1000).toFixed(0) + 'k' : '$' + max.toFixed(0);
+      const lblMin = s.key === 'nalco' ? '₹' + (min/1000).toFixed(0) + 'k' : '₹' + min.toFixed(0);
+      const lblMax = s.key === 'nalco' ? '₹' + (max/1000).toFixed(0) + 'k' : '₹' + max.toFixed(0);
       svg += `<text x="${PAD_L - 4}" y="${(PAD_T + 4).toFixed(0)}" font-size="9" fill="${s.color}" text-anchor="end" font-family="DM Mono,monospace">${lblMax}</text>`;
       svg += `<text x="${PAD_L - 4}" y="${(PAD_T + plotH).toFixed(0)}" font-size="9" fill="${s.color}" text-anchor="end" font-family="DM Mono,monospace">${lblMin}</text>`;
     }
@@ -3704,8 +3716,8 @@ function renderRateChart() {
 // INIT
 // ============================================================
 // App version + build stamp (shown small under the title)
-const APP_VERSION = 'v3.1.0';
-const APP_BUILD = '2026-06-13 11:00 IST';
+const APP_VERSION = 'v3.1.1';
+const APP_BUILD = '2026-06-13 12:30 IST';
 (function showVersion(){
   const el = document.getElementById('app-version-line');
   if (el) el.textContent = APP_VERSION + ' • ' + APP_BUILD;
