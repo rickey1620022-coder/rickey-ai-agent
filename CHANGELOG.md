@@ -9,6 +9,35 @@ shown in small text under the title in the app header.
 
 ---
 
+## v3.1.0 — 2026-06-13 11:00 IST
+**Source file:** `versions/rickey-ai-agent-v3.1.0.html`
+
+Three improvements to the rate strip.
+
+- **NALCO refresh fixed (no more stale rate).** The app now always asks the
+  worker for fresh data on load (with a cache-buster), only using the cached
+  rate as an instant preview while the network call runs. When NALCO publishes
+  a new circular, the new date and price replace the old one immediately.
+  Worker also widened the date-walk to 30 days and uses **IST** (so it doesn't
+  miss the latest circular due to UTC clock drift).
+- **LME aluminium added.** The strip now shows the LME 3-month closing price
+  next to NALCO, converted to **INR/kg using a live USD-INR rate**. Daily %
+  change shown next to the figure (green for up, red for down). LME is
+  **day-delayed** on the free public page — that's clearly labelled in the meta
+  line. Added an "🌍 LME" link in the quick-links row.
+- **Price-change chart (last 10 changes).** Tap **📈 Chart** on the rate card
+  to expand a small line chart of the last 10 distinct price changes for both
+  NALCO (₹/MT) and LME ($/t), with dates on the x-axis and a coloured legend.
+  Only *changes* are recorded, so the same value isn't repeated. History is
+  capped at 10 per source.
+- New worker file: NALCO + LME + USD-INR (see worker/rates-worker.js).
+- PWA cache bumped to `rickey-ai-v18`.
+
+> Note: LME doesn't publish a free live price — even paid feeds see the official
+> closing price the day after. The app labels this clearly ("3-mo Closing,
+> day-delayed") so you always know what you're looking at. The "🌍 LME" link
+> opens the real LME page if you want the live snapshot in your browser.
+
 ## v3.0.1 — 2026-06-02 01:30 IST
 **Source file:** `versions/rickey-ai-agent-v3.0.1.html`
 
