@@ -118,12 +118,13 @@ async function getNalco() {
     perMT: price,
     perKg: Math.round((price / 1000) * 100) / 100,
     date: `${dd}-${mm}-${yyyy}`,
-    grade: 'IE07',
+    grade: 'IA10',
   };
 }
 
 async function pdfToText(bytes) {
-  let text = bytesToLatin1(bytes);
+  // Do NOT use raw bytes — binary PDF data has accidental numbers.
+  // Only use DECOMPRESSED stream content.
   const streamTag = strToBytes('stream');
   const endTag = strToBytes('endstream');
   const chunks = [];
@@ -143,6 +144,7 @@ async function pdfToText(bytes) {
     idx = e + endTag.length;
     if (chunks.length > 60) break;
   }
+  let text = '';
   for (const c of chunks) {
     const inflated = await tryInflate(c);
     if (inflated) text += '\n' + bytesToLatin1(inflated);
@@ -174,17 +176,14 @@ function extractParenText(s) {
 function parseNalco(text) {
   if (!text) return null;
   const t = text.replace(/\s+/g, ' ');
-  let m = t.match(/IE07\D{0,8}([0-9]{5,7})/);
+  // IA10 = Aluminium Alloy Ingot (main trading grade shown to user)
+  let m = t.match(/IA10\D{0,8}([0-9]{5,7})/);
+  if (!m) m = t.match(/IE07\D{0,8}([0-9]{5,7})/);
   if (!m) m = t.match(/IE10\D{0,8}([0-9]{5,7})/);
   if (!m) m = t.match(/IC20\D{0,8}([0-9]{5,7})/);
-  if (!m) {
-    // Last resort: any 6-digit number in plausible aluminium ingot range
-    const all = (t.match(/\b([3-5][0-9]{5})\b/g) || []).map(Number).filter(v => v >= 350000 && v <= 600000);
-    if (all.length) return all[0];
-    return null;
-  }
+  if (!m) return null;
   const v = parseInt(m[1], 10);
-  return (v >= 50000 && v <= 9999999) ? v : null;
+  return (v >= 200000 && v <= 999999) ? v : null;
 }
 
 // ============================ ALUMINIUM PRICE (Yahoo Finance) ============================

@@ -9,6 +9,32 @@ shown in small text under the title in the app header.
 
 ---
 
+## v3.2.2 — 2026-06-14 21:30 IST
+**Source file:** `versions/rickey-ai-agent-v3.2.2.html`
+
+Two root-cause fixes for wrong NALCO price and overflow.
+
+**Wrong NALCO price (₹3,55,272) — root cause found and fixed**
+The `pdfToText` function was prepending raw PDF binary bytes as latin1 text
+before the decompressed content. Those raw bytes accidentally contained the
+sequence `355272` as binary data, which the parser matched first — giving a
+completely wrong number. Fix: `pdfToText` now uses ONLY the decompressed
+stream content (raw bytes skipped entirely). Tested: binary garbage `355272`
+in the PDF header is now ignored; correct IA10 ₹3,96,150 is extracted.
+
+**Grade changed from IE07 to IA10**
+IA10 (Aluminium Alloy Ingot) is the main traded grade — as confirmed by the
+photo of the 13-Jun-2026 circular (IA10 = ₹3,96,150/MT). The parser now
+tries IA10 first, then IE07, IE10, IC20 as fallbacks. The app meta line
+shows the actual grade returned by the worker (dynamic, not hardcoded).
+
+- Calculator overflow already fixed in v3.2.1 (grid layout).
+- PWA cache bumped to `rickey-ai-v24`.
+
+**Expected values from 13-Jun-2026 circular:**
+- IA10 (Alloy Ingot): ₹3,96,150/MT = ₹396.15/kg
+- IE07 (Pure Ingot): ₹3,93,850/MT = ₹393.85/kg
+
 ## v3.2.1 — 2026-06-14 21:00 IST
 **Source file:** `versions/rickey-ai-agent-v3.2.1.html`
 

@@ -826,7 +826,7 @@
 <header class="header">
   <div>
     <div class="header-title">RICKEY <span>AI</span> AGENT</div>
-    <div id="app-version-line" style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v3.2.1</div>
+    <div id="app-version-line" style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v3.2.2</div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
     <button id="api-key-btn" onclick="openAPIKey()" style="display:flex;align-items:center;gap:6px;background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;">
@@ -3646,7 +3646,7 @@ function showRates(data) {
   if (data.nalco && data.nalco.perMT) {
     document.getElementById('nalco-price').textContent = '₹' + Number(data.nalco.perMT).toLocaleString('en-IN') + '/MT';
     const kg = data.nalco.perKg || (data.nalco.perMT / 1000);
-    document.getElementById('nalco-meta').textContent = 'IE07 • ' + (data.nalco.date || '') + ' • ≈₹' + Number(kg).toLocaleString('en-IN',{maximumFractionDigits:2}) + '/kg' + when;
+    document.getElementById('nalco-meta').textContent = (data.nalco.grade || 'IA10') + ' • ' + (data.nalco.date || '') + ' • ≈₹' + Number(kg).toLocaleString('en-IN',{maximumFractionDigits:2}) + '/kg' + when;
     nBlock.style.display = 'flex';
     nalcoCard.style.display = 'block';
   } else { nBlock.style.display = 'none'; nalcoCard.style.display = 'none'; }
@@ -3780,8 +3780,8 @@ function renderRateChart() {
 // INIT
 // ============================================================
 // App version + build stamp (shown small under the title)
-const APP_VERSION = 'v3.2.1';
-const APP_BUILD = '2026-06-14 21:00 IST';
+const APP_VERSION = 'v3.2.2';
+const APP_BUILD = '2026-06-14 21:30 IST';
 (function showVersion(){
   const el = document.getElementById('app-version-line');
   if (el) el.textContent = APP_VERSION + ' • ' + APP_BUILD;
