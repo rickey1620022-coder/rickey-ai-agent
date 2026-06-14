@@ -826,7 +826,7 @@
 <header class="header">
   <div>
     <div class="header-title">RICKEY <span>AI</span> AGENT</div>
-    <div id="app-version-line" style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v3.1.1</div>
+    <div id="app-version-line" style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v3.1.2</div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
     <button id="api-key-btn" onclick="openAPIKey()" style="display:flex;align-items:center;gap:6px;background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;">
@@ -894,7 +894,7 @@
       <div id="lme-block" style="display:flex;align-items:center;gap:10px;">
         <span style="font-size:1.5rem;">🌍</span>
         <div>
-          <span style="font-size:0.62rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;">LME Aluminium (3-mo)</span>
+          <span style="font-size:0.62rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;">Aluminium Futures (ALI=F)</span>
           <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
             <span id="lme-price" style="font-size:1.4rem;font-weight:800;font-family:'Syne',sans-serif;color:#2563eb;line-height:1.1;">—</span>
             <span id="lme-change" style="font-size:0.78rem;font-weight:700;font-family:'DM Mono',monospace;"></span>
@@ -3608,8 +3608,8 @@ function showRates(data) {
       chEl.textContent = (ch >= 0 ? '▲ +' : '▼ ') + Math.abs(ch).toFixed(2) + '%';
       chEl.style.color = ch >= 0 ? '#16a34a' : '#dc2626';
     } else { chEl.textContent = ''; }
-    const fxNote = fxSource === 'live' ? `@₹${fxRate}/USD` : `@₹${fxRate}/USD approx`;
-    document.getElementById('lme-meta').textContent = '3-mo Closing (day-delayed) • ' + fxNote + when;
+    const fxNote = fxSource === 'live' ? `@₹${fxRate}/USD` : `@₹${fxRate}/USD (approx)`;
+    document.getElementById('lme-meta').textContent = 'Futures (ALI=F) • day-delayed • ' + fxNote + when;
     lmeCard.style.display = 'block';
   } else {
     lmeCard.style.display = 'none';
@@ -3716,8 +3716,8 @@ function renderRateChart() {
 // INIT
 // ============================================================
 // App version + build stamp (shown small under the title)
-const APP_VERSION = 'v3.1.1';
-const APP_BUILD = '2026-06-13 12:30 IST';
+const APP_VERSION = 'v3.1.2';
+const APP_BUILD = '2026-06-13 18:30 IST';
 (function showVersion(){
   const el = document.getElementById('app-version-line');
   if (el) el.textContent = APP_VERSION + ' • ' + APP_BUILD;

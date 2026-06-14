@@ -9,6 +9,29 @@ shown in small text under the title in the app header.
 
 ---
 
+## v3.1.2 — 2026-06-13 18:30 IST
+**Source file:** `versions/rickey-ai-agent-v3.1.2.html`
+
+Root-cause fixes for both the stale NALCO rate and the missing aluminium price card.
+
+**NALCO stale price (root cause found and fixed)**
+NALCO's server was returning the old 27-May PDF for any unrecognised date filename
+(a server-side fallback/redirect). The worker would fetch, get the old price, but tag
+it with today's date — so the date looked fresh but the number was stale.
+Fix: the worker now extracts the date from **inside** the PDF and verifies it matches
+the requested filename. If they don't match, it skips that date and tries the next one
+back, until it finds the actual latest circular (currently 10-06-2026, ₹4,02,350/MT).
+
+**LME → Aluminium Futures (ALI=F)**
+LME's website returns HTTP 403 to Cloudflare Workers (bot-blocking). Replaced with
+**Yahoo Finance ALI=F** (COMEX aluminium futures), which is a free no-key JSON API.
+ALI=F is the internationally quoted aluminium price, closely tracks LME.
+The card on the app now correctly says "Aluminium Futures (ALI=F)" with the live
+₹/kg (INR converted via the live USD/INR feed).
+
+- FX (USD-INR) still working fine at ₹95.31/USD as seen in the logs.
+- PWA cache bumped to `rickey-ai-v20`.
+
 ## v3.1.1 — 2026-06-13 12:30 IST
 **Source file:** `versions/rickey-ai-agent-v3.1.1.html`
 
