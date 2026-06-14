@@ -9,6 +9,20 @@ shown in small text under the title in the app header.
 
 ---
 
+## v3.1.3 — 2026-06-14 18:45 IST
+**Source file:** `versions/rickey-ai-agent-v3.1.3.html`
+
+Fixed: NALCO card disappearing after the worker update.
+
+- The NALCO date-validation logic was correct in code (confirmed by test) but
+  the per-date timeout was 9s × up to 30 dates, which could exceed Cloudflare's
+  worker time budget before reaching 10-Jun. Shortened per-fetch timeout to 5s
+  so the worker reaches the correct date faster.
+- Both cards now show independently: NALCO (purple) on top, Aluminium Futures
+  (blue) below it.
+- Aluminium Futures card was already working (₹340.65/kg @ 7.91% shown).
+- Bumped PWA cache to `rickey-ai-v21`.
+
 ## v3.1.2 — 2026-06-13 18:30 IST
 **Source file:** `versions/rickey-ai-agent-v3.1.2.html`
 
