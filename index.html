@@ -826,7 +826,7 @@
 <header class="header">
   <div>
     <div class="header-title">RICKEY <span>AI</span> AGENT</div>
-    <div id="app-version-line" style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v3.1.3</div>
+    <div id="app-version-line" style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v3.2.0</div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
     <button id="api-key-btn" onclick="openAPIKey()" style="display:flex;align-items:center;gap:6px;background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;">
@@ -902,6 +902,31 @@
           <div id="lme-meta" style="font-size:0.64rem;color:var(--muted);"></div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Currency calculator: USD / RMB → INR -->
+  <div id="fx-calc" style="padding:12px 16px;border-radius:12px;background:var(--surface2);border:1.5px solid var(--border);">
+    <div style="font-size:0.62rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;margin-bottom:10px;">💱 Currency Calculator → ₹ INR</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <!-- USD row -->
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:1.1rem;">🇺🇸</span>
+        <input id="fx-usd" type="number" placeholder="Enter USD amount" min="0" step="any" oninput="calcFx('usd')" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:0.9rem;font-family:'DM Mono',monospace;" />
+        <span style="font-size:0.8rem;color:var(--muted);white-space:nowrap;">USD</span>
+        <span style="font-size:1rem;color:var(--muted);">=</span>
+        <span id="fx-usd-result" style="font-size:1rem;font-weight:800;font-family:'Syne',sans-serif;color:var(--accent);white-space:nowrap;min-width:80px;text-align:right;">₹—</span>
+      </div>
+      <!-- RMB row -->
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:1.1rem;">🇨🇳</span>
+        <input id="fx-cny" type="number" placeholder="Enter RMB/CNY amount" min="0" step="any" oninput="calcFx('cny')" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:0.9rem;font-family:'DM Mono',monospace;" />
+        <span style="font-size:0.8rem;color:var(--muted);white-space:nowrap;">CNY</span>
+        <span style="font-size:1rem;color:var(--muted);">=</span>
+        <span id="fx-cny-result" style="font-size:1rem;font-weight:800;font-family:'Syne',sans-serif;color:#2563eb;white-space:nowrap;min-width:80px;text-align:right;">₹—</span>
+      </div>
+      <!-- Rate info line -->
+      <div id="fx-rate-info" style="font-size:0.65rem;color:var(--muted);text-align:right;margin-top:2px;">— rates loading —</div>
     </div>
   </div>
 
@@ -3503,7 +3528,7 @@ async function loadRates(manual) {
   // Show cached rates instantly as a preview (do not skip the network call).
   try {
     const cached = JSON.parse(localStorage.getItem('rickey_rates_cache') || 'null');
-    if (cached) showRates(cached);
+    if (cached) { showRates(cached); if (cached.fx) updateFxRates(cached.fx); }
   } catch (e) {}
 
   const base = getRatesWorkerUrl();
@@ -3541,7 +3566,39 @@ async function loadRates(manual) {
   }
 }
 
-// ===== Price history tracking (last 10 entries per source) =====
+// ===== Currency calculator =====
+let fxRates = { usdInr: null, cnyInr: null };
+
+function calcFx(which) {
+  const usdInr = fxRates.usdInr || 86.5;
+  const cnyInr = fxRates.cnyInr || (86.5 / 7.27); // approx fallback
+
+  if (which === 'usd') {
+    const v = parseFloat(document.getElementById('fx-usd').value);
+    const result = document.getElementById('fx-usd-result');
+    result.textContent = isNaN(v) || v === '' ? '₹—' : '₹' + (v * usdInr).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  } else {
+    const v = parseFloat(document.getElementById('fx-cny').value);
+    const result = document.getElementById('fx-cny-result');
+    result.textContent = isNaN(v) || v === '' ? '₹—' : '₹' + (v * cnyInr).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  }
+}
+
+function updateFxRates(fx) {
+  if (!fx) return;
+  if (fx.usdInr) fxRates.usdInr = fx.usdInr;
+  if (fx.cnyInr) fxRates.cnyInr = fx.cnyInr;
+  const info = document.getElementById('fx-rate-info');
+  if (info) {
+    const parts = [];
+    if (fx.usdInr) parts.push('1 USD = ₹' + fx.usdInr);
+    if (fx.cnyInr) parts.push('1 CNY = ₹' + fx.cnyInr);
+    if (parts.length) info.textContent = parts.join('  •  ') + '  (live)';
+  }
+  // Recalculate any existing values
+  if (document.getElementById('fx-usd').value) calcFx('usd');
+  if (document.getElementById('fx-cny').value) calcFx('cny');
+}
 function loadRateHistory() {
   try { return JSON.parse(localStorage.getItem('rickey_rate_history') || '{}'); }
   catch (e) { return {}; }
@@ -3614,6 +3671,9 @@ function showRates(data) {
   } else {
     lmeCard.style.display = 'none';
   }
+
+  // Update the FX calculator with live rates
+  if (data.fx) updateFxRates(data.fx);
 
   // Refresh chart if it's open
   const chartWrap = document.getElementById('rate-chart-wrap');
@@ -3716,8 +3776,8 @@ function renderRateChart() {
 // INIT
 // ============================================================
 // App version + build stamp (shown small under the title)
-const APP_VERSION = 'v3.1.3';
-const APP_BUILD = '2026-06-14 18:45 IST';
+const APP_VERSION = 'v3.2.0';
+const APP_BUILD = '2026-06-14 20:00 IST';
 (function showVersion(){
   const el = document.getElementById('app-version-line');
   if (el) el.textContent = APP_VERSION + ' • ' + APP_BUILD;

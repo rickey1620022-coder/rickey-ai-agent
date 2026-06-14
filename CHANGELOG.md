@@ -9,6 +9,22 @@ shown in small text under the title in the app header.
 
 ---
 
+## v3.2.0 — 2026-06-14 20:00 IST
+**Source file:** `versions/rickey-ai-agent-v3.2.0.html`
+
+Added a live currency calculator on the front page.
+
+- **💱 Currency Calculator → ₹ INR** sits below the rate cards, above the tabs.
+  Type any amount in USD or RMB/CNY and the INR equivalent updates instantly.
+- Rates are live from the same FX feed the rates cards use (open.er-api.com).
+  The info line shows: `1 USD = ₹91.82  •  1 CNY = ₹12.65  (live)`.
+- Worker now also returns `cnyInr` (INR per 1 Chinese Yuan), computed as
+  `(USD/INR rate) ÷ (USD/CNY rate)` from the same free FX API.
+- Calculator is seeded from cache instantly on app open, then updates when the
+  network call returns the fresh rate.
+- Falls back to approximate rates (₹86.5/USD, ₹11.9/CNY) if FX is unavailable.
+- Bump v3.2.0, PWA cache `rickey-ai-v22`.
+
 ## v3.1.3 — 2026-06-14 18:45 IST
 **Source file:** `versions/rickey-ai-agent-v3.1.3.html`
 

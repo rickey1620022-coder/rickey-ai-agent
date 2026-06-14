@@ -1,7 +1,7 @@
 // Rickey AI Agent — Service Worker
 // Handles offline caching and PWA install
 
-const CACHE_NAME = 'rickey-ai-v21';
+const CACHE_NAME = 'rickey-ai-v22';
 const ASSETS = [
   './',
   './index.html',
