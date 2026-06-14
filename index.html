@@ -826,7 +826,7 @@
 <header class="header">
   <div>
     <div class="header-title">RICKEY <span>AI</span> AGENT</div>
-    <div id="app-version-line" style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v3.2.0</div>
+    <div id="app-version-line" style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;">v3.2.1</div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
     <button id="api-key-btn" onclick="openAPIKey()" style="display:flex;align-items:center;gap:6px;background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;">
@@ -908,26 +908,30 @@
   <!-- Currency calculator: USD / RMB → INR -->
   <div id="fx-calc" style="padding:12px 16px;border-radius:12px;background:var(--surface2);border:1.5px solid var(--border);">
     <div style="font-size:0.62rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;margin-bottom:10px;">💱 Currency Calculator → ₹ INR</div>
-    <div style="display:flex;flex-direction:column;gap:8px;">
-      <!-- USD row -->
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span style="font-size:1.1rem;">🇺🇸</span>
-        <input id="fx-usd" type="number" placeholder="Enter USD amount" min="0" step="any" oninput="calcFx('usd')" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:0.9rem;font-family:'DM Mono',monospace;" />
-        <span style="font-size:0.8rem;color:var(--muted);white-space:nowrap;">USD</span>
-        <span style="font-size:1rem;color:var(--muted);">=</span>
-        <span id="fx-usd-result" style="font-size:1rem;font-weight:800;font-family:'Syne',sans-serif;color:var(--accent);white-space:nowrap;min-width:80px;text-align:right;">₹—</span>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <!-- USD card -->
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+          <span style="font-size:1rem;">🇺🇸</span>
+          <span style="font-size:0.7rem;font-weight:700;color:var(--muted);font-family:'Syne',sans-serif;">USD</span>
+        </div>
+        <input id="fx-usd" type="number" placeholder="0" min="0" step="any" oninput="calcFx('usd')" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1.5px solid var(--border);border-radius:7px;background:var(--surface2);color:var(--text);font-size:1rem;font-family:'DM Mono',monospace;margin-bottom:6px;" />
+        <div style="font-size:0.62rem;color:var(--muted);margin-bottom:2px;">= INR</div>
+        <div id="fx-usd-result" style="font-size:1.15rem;font-weight:800;font-family:'Syne',sans-serif;color:var(--accent);word-break:break-all;">₹—</div>
       </div>
-      <!-- RMB row -->
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span style="font-size:1.1rem;">🇨🇳</span>
-        <input id="fx-cny" type="number" placeholder="Enter RMB/CNY amount" min="0" step="any" oninput="calcFx('cny')" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:0.9rem;font-family:'DM Mono',monospace;" />
-        <span style="font-size:0.8rem;color:var(--muted);white-space:nowrap;">CNY</span>
-        <span style="font-size:1rem;color:var(--muted);">=</span>
-        <span id="fx-cny-result" style="font-size:1rem;font-weight:800;font-family:'Syne',sans-serif;color:#2563eb;white-space:nowrap;min-width:80px;text-align:right;">₹—</span>
+      <!-- CNY card -->
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+          <span style="font-size:1rem;">🇨🇳</span>
+          <span style="font-size:0.7rem;font-weight:700;color:var(--muted);font-family:'Syne',sans-serif;">RMB / CNY</span>
+        </div>
+        <input id="fx-cny" type="number" placeholder="0" min="0" step="any" oninput="calcFx('cny')" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1.5px solid var(--border);border-radius:7px;background:var(--surface2);color:var(--text);font-size:1rem;font-family:'DM Mono',monospace;margin-bottom:6px;" />
+        <div style="font-size:0.62rem;color:var(--muted);margin-bottom:2px;">= INR</div>
+        <div id="fx-cny-result" style="font-size:1.15rem;font-weight:800;font-family:'Syne',sans-serif;color:#2563eb;word-break:break-all;">₹—</div>
       </div>
-      <!-- Rate info line -->
-      <div id="fx-rate-info" style="font-size:0.65rem;color:var(--muted);text-align:right;margin-top:2px;">— rates loading —</div>
     </div>
+    <!-- Rate info line -->
+    <div id="fx-rate-info" style="font-size:0.65rem;color:var(--muted);text-align:center;margin-top:8px;">— rates loading —</div>
   </div>
 
   <!-- Always-visible quick links to live Delhi market rates -->
@@ -3776,8 +3780,8 @@ function renderRateChart() {
 // INIT
 // ============================================================
 // App version + build stamp (shown small under the title)
-const APP_VERSION = 'v3.2.0';
-const APP_BUILD = '2026-06-14 20:00 IST';
+const APP_VERSION = 'v3.2.1';
+const APP_BUILD = '2026-06-14 21:00 IST';
 (function showVersion(){
   const el = document.getElementById('app-version-line');
   if (el) el.textContent = APP_VERSION + ' • ' + APP_BUILD;

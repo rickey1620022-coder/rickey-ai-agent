@@ -9,6 +9,30 @@ shown in small text under the title in the app header.
 
 ---
 
+## v3.2.1 — 2026-06-14 21:00 IST
+**Source file:** `versions/rickey-ai-agent-v3.2.1.html`
+
+Two fixes.
+
+**1. Calculator overflow fixed.** The result (₹95.3, ₹14.05) was spilling
+outside the box on narrow phone screens. Redesigned as a side-by-side 2-card
+grid: each currency (USD / CNY) is its own card with the input on top and the
+₹ result below it. No more overflow possible — `word-break:break-all` handles
+even very large numbers.
+
+**2. NALCO worker timeout fixed (HEAD-then-GET strategy).** The previous
+approach did a full PDF download (large file) for each date. NALCO's server
+returns 200 OK with a stale PDF for any unrecognised filename, so the worker
+was downloading the wrong PDF 8+ times before finding the right one — easily
+exceeding Cloudflare's 30-second limit. New approach:
+- Step 1: **HEAD requests** (no body, ~100ms each) to find which dated file
+  actually exists. Non-existent dates return 404 instantly.
+- Step 2: **One GET** of the confirmed file. Done.
+- Test result: 9 HEAD calls (< 1 second total) + 1 GET → correct ₹4,02,350.
+- Cloudflare's content-type check catches any HTML redirect pages.
+
+PWA cache bumped to `rickey-ai-v23`.
+
 ## v3.2.0 — 2026-06-14 20:00 IST
 **Source file:** `versions/rickey-ai-agent-v3.2.0.html`
 

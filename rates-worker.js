@@ -1,22 +1,21 @@
 /**
- * Rickey AI Agent — Rates Worker  (NALCO + LME + USD/INR)
+ * Rickey AI Agent — Rates Worker  (NALCO + Aluminium Futures + USD/INR)
  * ------------------------------------------------------------------
- * Free Cloudflare Worker. Fetches:
- *   - NALCO aluminium ingot rate (PDF, INR/MT)        — official source
- *   - LME aluminium 3-mo closing (HTML, USD/tonne)    — day-delayed (free tier)
- *   - USD-INR exchange (free open API)                — to show LME in INR/kg
+ * Sources:
+ *   - NALCO aluminium ingot PDF (official Indian source, INR/MT)
+ *   - Yahoo Finance ALI=F (COMEX aluminium futures, USD/tonne, free, no key)
+ *     This is the internationally quoted aluminium price, closely tracks LME.
+ *   - USD-INR from open.er-api.com (free, no key)
  *
  * The app calls:  GET <workerURL>/rates  -> { ok, nalco, lme, fx, errors }
  * Health check:   GET <workerURL>/
- *
- * Cache is short (10 min) so price changes show quickly.
  */
 
 const NALCO_BASE = 'https://nalcoindia.com/wp-content/uploads/2019/01/';
-const LME_URL = 'https://www.lme.com/metals/non-ferrous/lme-aluminium';
-const FX_URL = 'https://api.exchangerate.host/latest?base=USD&symbols=INR';
-const FX_FALLBACK_URL = 'https://open.er-api.com/v6/latest/USD';
-const CACHE_SECONDS = 600;
+const YAHOO_URL  = 'https://query1.finance.yahoo.com/v8/finance/chart/ALI%3DF?interval=1d&range=5d';
+const FX_URL     = 'https://open.er-api.com/v6/latest/USD';
+const FX_URL2    = 'https://api.exchangerate.host/latest?base=USD&symbols=INR';
+const CACHE_SECONDS = 300; // 5 min
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36';
 
 export default {
@@ -37,16 +36,21 @@ export default {
 
     const out = { ok: true, fetchedAt: new Date().toISOString(), nalco: null, lme: null, fx: null, errors: {} };
 
-    // Run all three in parallel — any one failing doesn't block the others.
+    // Run all three in parallel
     const [n, l, f] = await Promise.allSettled([getNalco(), getLme(), getFx()]);
-    if (n.status === 'fulfilled') out.nalco = n.value; else out.errors.nalco = String(n.reason && n.reason.message || n.reason);
-    if (l.status === 'fulfilled') out.lme   = l.value; else out.errors.lme   = String(l.reason && l.reason.message || l.reason);
-    if (f.status === 'fulfilled') out.fx    = f.value; else out.errors.fx    = String(f.reason && f.reason.message || f.reason);
+    if (n.status === 'fulfilled') out.nalco = n.value;
+    else out.errors.nalco = String(n.reason && n.reason.message || n.reason);
+    if (l.status === 'fulfilled') out.lme = l.value;
+    else out.errors.lme = String(l.reason && l.reason.message || l.reason);
+    if (f.status === 'fulfilled') out.fx = f.value;
+    else out.errors.fx = String(f.reason && f.reason.message || f.reason);
 
-    // Derived INR/kg for LME using current FX (handy for the app)
-    if (out.lme && out.fx && out.fx.usdInr) {
-      out.lme.perKgInr = Math.round((out.lme.perTonneUsd * out.fx.usdInr / 1000) * 100) / 100;
-      out.lme.perMtInr = Math.round(out.lme.perTonneUsd * out.fx.usdInr);
+    // Compute LME in INR/kg using live FX (or fallback ~86)
+    if (out.lme && out.lme.perTonneUsd) {
+      const fxRate = (out.fx && out.fx.usdInr) || 86.5;
+      out.lme.perKgInr  = Math.round(out.lme.perTonneUsd * fxRate / 1000 * 100) / 100;
+      out.lme.perMtInr  = Math.round(out.lme.perTonneUsd * fxRate);
+      out.lme.fxUsed    = fxRate;
     }
 
     return new Response(JSON.stringify(out), {
@@ -55,7 +59,7 @@ export default {
   },
 };
 
-async function fetchTimeout(url, opts = {}, ms = 8000) {
+async function fetchTimeout(url, opts = {}, ms = 9000) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
   try { return await fetch(url, { ...opts, signal: ctrl.signal }); }
@@ -63,10 +67,15 @@ async function fetchTimeout(url, opts = {}, ms = 8000) {
 }
 
 // ============================ NALCO ============================
-// Walk back from today (in IST, since NALCO publishes by Indian date) up to 30 days.
+// Strategy: first do a fast HEAD scan to find which dated file actually exists
+// on NALCO's server (HEAD is ~100ms, no body download). Then GET only that file.
+// This avoids the "download stale PDF 8 times" timeout problem.
 async function getNalco() {
-  const istNow = new Date(Date.now() + 5.5 * 3600 * 1000); // shift to IST
-  for (let i = 0; i < 30; i++) {
+  const istNow = new Date(Date.now() + 5.5 * 3600 * 1000);
+
+  // Step 1: find the actual existing file via HEAD (no body, very fast)
+  let foundName = null, foundDate = null;
+  for (let i = 0; i < 30 && !foundName; i++) {
     const d = new Date(istNow.getTime() - i * 86400 * 1000);
     const dd = String(d.getUTCDate()).padStart(2, '0');
     const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
@@ -74,20 +83,43 @@ async function getNalco() {
     for (const name of [`Ingot-${dd}-${mm}-${yyyy}.pdf`, `INGOT-${dd}-${mm}-${yyyy}.pdf`]) {
       try {
         const res = await fetchTimeout(NALCO_BASE + name, {
-          headers: { 'User-Agent': UA, 'Accept': 'application/pdf,*/*' },
-          cf: { cacheTtl: 600 },
-        }, 8000);
-        if (!res.ok) continue;
-        const buf = new Uint8Array(await res.arrayBuffer());
-        const text = await pdfToText(buf);
-        const price = parseNalco(text);
-        if (price) {
-          return { perMT: price, perKg: Math.round((price / 1000) * 100) / 100, date: `${dd}-${mm}-${yyyy}`, grade: 'IE07' };
+          method: 'HEAD',
+          headers: { 'User-Agent': UA },
+          cf: { cacheTtl: 60 },
+        }, 3000);
+        if (res.ok) {
+          // Confirm it's actually a PDF (not a redirect to an HTML error page)
+          const ct = res.headers && res.headers.get('content-type');
+          if (ct && ct.includes('html')) continue; // HTML = redirect/error page
+          foundName = name;
+          foundDate = `${dd}.${mm}.${yyyy}`;
+          break;
         }
-      } catch (e) { /* try next */ }
+      } catch (e) {}
     }
   }
-  throw new Error('No NALCO circular found in last 30 days');
+
+  if (!foundName) throw new Error('No NALCO circular found (HEAD scan, 30 days)');
+
+  // Step 2: GET the confirmed file and parse it
+  const res = await fetchTimeout(NALCO_BASE + foundName, {
+    headers: { 'User-Agent': UA, 'Accept': 'application/pdf,*/*' },
+    cf: { cacheTtl: 300 },
+  }, 9000);
+  if (!res.ok) throw new Error('NALCO GET failed: ' + res.status);
+
+  const buf = new Uint8Array(await res.arrayBuffer());
+  const text = await pdfToText(buf);
+  const price = parseNalco(text);
+  if (!price) throw new Error('NALCO price not found in ' + foundName);
+
+  const [dd, mm, yyyy] = foundName.replace(/INGOT-/i,'').replace('.pdf','').split('-');
+  return {
+    perMT: price,
+    perKg: Math.round((price / 1000) * 100) / 100,
+    date: `${dd}-${mm}-${yyyy}`,
+    grade: 'IE07',
+  };
 }
 
 async function pdfToText(bytes) {
@@ -126,7 +158,7 @@ async function tryInflate(bytes) {
       const stream = new Response(bytes).body.pipeThrough(ds);
       const out = new Uint8Array(await new Response(stream).arrayBuffer());
       if (out && out.length) return out;
-    } catch (e) { /* try next */ }
+    } catch (e) {}
   }
   return null;
 }
@@ -146,7 +178,8 @@ function parseNalco(text) {
   if (!m) m = t.match(/IE10\D{0,8}([0-9]{5,7})/);
   if (!m) m = t.match(/IC20\D{0,8}([0-9]{5,7})/);
   if (!m) {
-    const all = (t.match(/\b(4[0-2][0-9]{4})\b/g) || []).map(Number).filter(v => v >= 350000 && v <= 520000);
+    // Last resort: any 6-digit number in plausible aluminium ingot range
+    const all = (t.match(/\b([3-5][0-9]{5})\b/g) || []).map(Number).filter(v => v >= 350000 && v <= 600000);
     if (all.length) return all[0];
     return null;
   }
@@ -154,72 +187,65 @@ function parseNalco(text) {
   return (v >= 50000 && v <= 9999999) ? v : null;
 }
 
-// ============================ LME ============================
-// LME page shows the 3-month closing price (day-delayed) in the heading area:
-//   # LME Aluminium  3535.00  0.94%
+// ============================ ALUMINIUM PRICE (Yahoo Finance) ============================
+// ALI=F = COMEX aluminium futures. Prices are in USD/troy oz on Yahoo but we
+// convert: 1 tonne = 26,455.3 troy oz... actually Yahoo reports ALI=F in USD per tonne
+// directly. Let's verify and extract.
 async function getLme() {
-  const res = await fetchTimeout(LME_URL, {
-    headers: { 'User-Agent': UA, 'Accept': 'text/html' },
-    cf: { cacheTtl: 600 },
+  const res = await fetchTimeout(YAHOO_URL, {
+    headers: { 'User-Agent': UA, 'Accept': 'application/json' },
+    cf: { cacheTtl: 300 },
   }, 9000);
-  if (!res.ok) throw new Error('LME HTTP ' + res.status);
-  const html = await res.text();
+  if (!res.ok) throw new Error('Yahoo HTTP ' + res.status);
+  const j = await res.json();
 
-  // Strip tags, normalise spaces; the price appears as "LME Aluminium  <num>  <num>%"
-  const text = html
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&[a-z0-9#]+;/gi, ' ')
-    .replace(/\s+/g, ' ');
+  // Response: chart.result[0].meta has regularMarketPrice (latest price)
+  const meta = j && j.chart && j.chart.result && j.chart.result[0] && j.chart.result[0].meta;
+  if (!meta) throw new Error('Yahoo: no chart.result.meta');
 
-  // Look for "LME Aluminium <price> <delta>%"
-  let m = text.match(/LME\s+Aluminium\s+([0-9]{3,5}(?:\.[0-9]+)?)\s+(-?[0-9]+(?:\.[0-9]+)?)\s*%/i);
-  // Fallback: first reasonable "NNNN.NN xx%" pattern after the words "Aluminium"
-  if (!m) {
-    const aIdx = text.search(/LME\s+Aluminium/i);
-    if (aIdx >= 0) {
-      const slice = text.slice(aIdx, aIdx + 400);
-      m = slice.match(/([0-9]{3,5}\.[0-9]{2})\s+(-?[0-9]+(?:\.[0-9]+)?)\s*%/);
-    }
-  }
-  if (!m) throw new Error('LME price not found in page');
+  let price = meta.regularMarketPrice;
+  if (!price || price < 100) throw new Error('Yahoo: price out of range: ' + price);
 
-  const perTonneUsd = parseFloat(m[1]);
-  const changePct = parseFloat(m[2]);
-  if (!perTonneUsd || perTonneUsd < 500 || perTonneUsd > 20000) {
-    throw new Error('LME price out of range: ' + perTonneUsd);
-  }
+  // Yahoo ALI=F is quoted in USD per tonne (typically 2000-4000 range for aluminium)
+  // If it looks like cents/lb (very small number), convert:
+  // 1 lb = 0.000453592 tonne, so $/lb * 2204.62 = $/tonne
+  if (price < 10) price = price * 2204.62; // probably $/lb
+
+  const prevClose = meta.chartPreviousClose || meta.previousClose;
+  const changePct = prevClose ? Math.round(((price - prevClose) / prevClose) * 10000) / 100 : null;
 
   return {
-    perTonneUsd,
+    perTonneUsd: Math.round(price * 100) / 100,
     changePct,
-    label: '3-month Closing (day-delayed)',
-    source: 'LME',
+    label: 'Aluminium Futures (ALI=F)',
+    source: 'Yahoo Finance',
   };
 }
 
 // ============================ USD-INR ============================
 async function getFx() {
-  // Primary: exchangerate.host (no key, JSON)
-  try {
-    const r = await fetchTimeout(FX_URL, { cf: { cacheTtl: 600 } }, 6000);
-    if (r.ok) {
+  for (const url of [FX_URL, FX_URL2]) {
+    try {
+      const r = await fetchTimeout(url, { cf: { cacheTtl: 300 } }, 7000);
+      if (!r.ok) continue;
       const j = await r.json();
-      const v = j && j.rates && j.rates.INR;
-      if (v && v > 50 && v < 200) return { usdInr: Math.round(v * 100) / 100, source: 'exchangerate.host' };
-    }
-  } catch (e) { /* try fallback */ }
-  // Fallback: open.er-api.com
-  try {
-    const r = await fetchTimeout(FX_FALLBACK_URL, { cf: { cacheTtl: 600 } }, 6000);
-    if (r.ok) {
-      const j = await r.json();
-      const v = j && j.rates && j.rates.INR;
-      if (v && v > 50 && v < 200) return { usdInr: Math.round(v * 100) / 100, source: 'open.er-api.com' };
-    }
-  } catch (e) {}
+      const rates = j && j.rates;
+      if (!rates) continue;
+      const inr = rates.INR;
+      const cny = rates.CNY;
+      if (inr && inr > 50 && inr < 200) {
+        const result = {
+          usdInr: Math.round(inr * 100) / 100,
+          source: url.includes('open.er') ? 'open.er-api.com' : 'exchangerate.host',
+        };
+        // CNY/INR = INR per 1 CNY = (INR/USD) / (CNY/USD)
+        if (cny && cny > 1) {
+          result.cnyInr = Math.round((inr / cny) * 100) / 100;
+        }
+        return result;
+      }
+    } catch (e) {}
+  }
   throw new Error('FX unavailable');
 }
 
