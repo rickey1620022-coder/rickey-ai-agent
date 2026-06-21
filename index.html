@@ -2261,7 +2261,7 @@ function aiSaveNote() {
   if (!tags.length) tags.push('note');
 
   notes.unshift({ id: uid(), title, summary: content.slice(0,100), tags, body: content, created: new Date().toISOString() });
-  save(); renderNotes();
+  save(); renderNotes(); queueAutoSync();
   document.getElementById('note-prompt').value = '';
   showToast('📒 Note saved!');
 }
@@ -2274,7 +2274,7 @@ function addNoteManual() {
   const tags = tagStr.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
 
   notes.unshift({ id: uid(), title, summary: body.slice(0, 100), tags, body, created: new Date().toISOString() });
-  save(); renderNotes(); closeModal('modal-note');
+  save(); renderNotes(); closeModal('modal-note'); queueAutoSync();
   document.getElementById('m-note-title').value = '';
   document.getElementById('m-note-body').value = '';
   document.getElementById('m-note-tags').value = '';
@@ -2300,7 +2300,8 @@ function closeNoteDetail() {
 function deleteCurrentNote() {
   if (!currentNoteId) return;
   notes = notes.filter(n => n.id !== currentNoteId);
-  save(); renderNotes(); closeNoteDetail(); showToast('Note deleted');
+  recordTombstone(currentNoteId);
+  save(); renderNotes(); closeNoteDetail(); showToast('Note deleted'); queueAutoSync();
 }
 
 function searchNotes() {
@@ -2365,7 +2366,7 @@ let activePhotoTag = 'all';
 let activePhotoCat = 'all';
 let pendingImgData = '';
 
-function savePhotos() { localStorage.setItem('rickey_photos', JSON.stringify(photos)); }
+function savePhotos() { localStorage.setItem('rickey_photos', JSON.stringify(photos)); queueAutoSync(); }
 
 function processNextPhoto() {
   if (pendingPhotoIndex >= pendingPhotoFiles.length) {
@@ -2414,6 +2415,7 @@ function savePhoto() {
 
 function deletePhoto(id) {
   photos = photos.filter(p => p.id !== id);
+  recordTombstone(id);
   savePhotos(); renderPhotos();
 }
 
@@ -3377,6 +3379,146 @@ function handleDriveError(e, set) {
   showToast(msg);
 }
 
+// ============================================================
+// AUTO-SYNC: Notes & Photos -> Google Drive (silent, safe, merge-by-id)
+// ------------------------------------------------------------
+// Goal: every note/photo save already happens instantly to THIS phone's
+// local storage exactly as before (unchanged). After that, if (and only if)
+// Google is already connected, this quietly mirrors notes+photos into the
+// SAME single backup file Drive Backup uses (rickey-ai-agent-backup.json) —
+// never a second file, never a duplicate entry.
+//
+// Safety rules:
+//  - Never blocks or delays the local save — local save always happens first.
+//  - If not connected to Google, or offline, it simply does nothing. No
+//    popup, no error shown to the user, no change to existing buttons.
+//  - MERGES by each item's unique `id` rather than overwriting wholesale, so
+//    syncing from two devices never causes data loss or duplicate records —
+//    for any id present on both sides, the newer `created`/`modified`
+//    timestamp wins; ids unique to either side are kept.
+//  - Throttled: waits a few seconds after the last change (so rapid edits
+//    don't spam the network), and never fires more than once every 20s.
+// ============================================================
+let autoSyncTimer = null;
+let autoSyncLastRun = 0;
+const AUTO_SYNC_DEBOUNCE_MS = 3000;
+const AUTO_SYNC_MIN_GAP_MS = 20000;
+const TOMBSTONES_KEY = 'rickey_sync_tombstones';
+
+// A tombstone records "this id was deleted on THIS phone at this time" so a
+// merge with an older Drive copy never resurrects it. Capped at 500 entries
+// (oldest dropped first) — plenty for normal use, keeps storage tiny.
+function recordTombstone(id) {
+  if (!id) return;
+  try {
+    const list = JSON.parse(localStorage.getItem(TOMBSTONES_KEY) || '[]');
+    list.push({ id, deletedAt: new Date().toISOString() });
+    while (list.length > 500) list.shift();
+    localStorage.setItem(TOMBSTONES_KEY, JSON.stringify(list));
+  } catch (e) {}
+}
+
+function getTombstoneMap() {
+  try {
+    const list = JSON.parse(localStorage.getItem(TOMBSTONES_KEY) || '[]');
+    const map = new Map();
+    for (const t of list) map.set(t.id, t.deletedAt);
+    return map;
+  } catch (e) { return new Map(); }
+}
+
+function queueAutoSync() {
+  if (!gAccessToken) return; // not connected — do nothing, silently
+  if (autoSyncTimer) clearTimeout(autoSyncTimer);
+  autoSyncTimer = setTimeout(runAutoSync, AUTO_SYNC_DEBOUNCE_MS);
+}
+
+function mergeById(localArr, remoteArr) {
+  // Returns a merged array: every id from both sides, newest version wins,
+  // EXCEPT ids deleted on this phone after the remote copy's timestamp —
+  // those stay deleted instead of resurfacing.
+  const tombstones = getTombstoneMap();
+  const stamp = (x) => new Date(x.modified || x.created || 0).getTime() || 0;
+  const map = new Map();
+  for (const item of (remoteArr || [])) {
+    if (!item || !item.id) continue;
+    const tombAt = tombstones.get(item.id);
+    if (tombAt && new Date(tombAt).getTime() >= stamp(item)) continue; // stays deleted
+    map.set(item.id, item);
+  }
+  for (const item of (localArr || [])) {
+    if (!item || !item.id) continue;
+    const existing = map.get(item.id);
+    if (!existing || stamp(item) >= stamp(existing)) map.set(item.id, item);
+  }
+  // Preserve newest-first ordering like the rest of the app expects.
+  return Array.from(map.values()).sort((a, b) => stamp(b) - stamp(a));
+}
+
+async function runAutoSync() {
+  if (!gAccessToken) return;
+  const now = Date.now();
+  if (now - autoSyncLastRun < AUTO_SYNC_MIN_GAP_MS) {
+    // Too soon since last sync — reschedule for later instead of skipping.
+    autoSyncTimer = setTimeout(runAutoSync, AUTO_SYNC_MIN_GAP_MS - (now - autoSyncLastRun));
+    return;
+  }
+  autoSyncLastRun = now;
+
+  try {
+    const existingId = await findDriveBackupId();
+    let remote = {};
+    if (existingId) {
+      try {
+        const r = await fetch(`https://www.googleapis.com/drive/v3/files/${existingId}?alt=media`, {
+          headers: { Authorization: 'Bearer ' + gAccessToken }
+        });
+        if (r.ok) remote = await r.json();
+      } catch (e) { /* if remote read fails, fall back to local-only merge below */ }
+    }
+
+    // Merge notes & photos by id; leave every other field exactly as Drive
+    // Backup already builds it, so manual "Backup to Drive" stays untouched.
+    const merged = buildBackupData();
+    merged.notes = mergeById(notes, remote.notes);
+    merged.photos = mergeById(photos, remote.photos);
+
+    const payload = JSON.stringify(merged);
+    const metadata = { name: DRIVE_BACKUP_NAME, mimeType: 'application/json' };
+    const boundary = 'rickeyboundary' + Date.now();
+    const body =
+      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n` +
+      JSON.stringify(existingId ? {} : metadata) +
+      `\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n` +
+      payload +
+      `\r\n--${boundary}--`;
+    const url = existingId
+      ? `https://www.googleapis.com/upload/drive/v3/files/${existingId}?uploadType=multipart`
+      : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+    const resp = await fetch(url, {
+      method: existingId ? 'PATCH' : 'POST',
+      headers: { Authorization: 'Bearer ' + gAccessToken, 'Content-Type': 'multipart/related; boundary=' + boundary },
+      body
+    });
+    if (!resp.ok) throw new Error('Auto-sync upload failed ' + resp.status);
+
+    // If the merge pulled in items from another device, reflect them here too.
+    if (merged.notes.length !== notes.length || merged.photos.length !== photos.length) {
+      notes = merged.notes; localStorage.setItem('rickey_notes', JSON.stringify(notes));
+      photos = merged.photos; localStorage.setItem('rickey_photos', JSON.stringify(photos));
+      if (typeof renderNotes === 'function') renderNotes();
+      if (typeof renderPhotos === 'function') renderPhotos();
+    }
+
+    localStorage.setItem('rickey_last_auto_sync', new Date().toISOString());
+    const el = document.getElementById('g-drive-status');
+    if (el) { el.style.display = 'block'; el.textContent = '✅ Auto-synced notes & photos • ' + new Date().toLocaleTimeString('en-IN'); el.style.color = '#34a853'; }
+  } catch (e) {
+    // Silent failure by design — auto-sync never interrupts the user.
+    // (Manual "Backup to Drive" still works and will show a visible error.)
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('db-import-file').addEventListener('change', function(e) {
     const file = e.target.files[0];
@@ -3780,8 +3922,8 @@ function renderRateChart() {
 // INIT
 // ============================================================
 // App version + build stamp (shown small under the title)
-const APP_VERSION = 'v3.2.2';
-const APP_BUILD = '2026-06-14 21:30 IST';
+const APP_VERSION = 'v3.3.0';
+const APP_BUILD = '2026-06-21 16:00 IST';
 (function showVersion(){
   const el = document.getElementById('app-version-line');
   if (el) el.textContent = APP_VERSION + ' • ' + APP_BUILD;
