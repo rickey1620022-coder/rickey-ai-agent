@@ -1730,7 +1730,10 @@ let currentNoteId = null;
 
 // Google vars — declared here so initGoogleTab() can access them safely
 let gTokenClient = null;
+let gCodeClient = null;
 let gAccessToken = localStorage.getItem('g_access_token') || '';
+let gRefreshToken = localStorage.getItem('g_refresh_token') || '';
+let gTokenExpiresAt = parseInt(localStorage.getItem('g_token_expires_at') || '0', 10);
 let gClientId    = localStorage.getItem('g_client_id') || '862446986268-6gmciu3vhhv50udesorlf6ke5n2pbeoq.apps.googleusercontent.com';
 let gEmailBody   = '';
 const GSCOPES = [
@@ -3298,6 +3301,7 @@ function exportAllData() {
 const DRIVE_BACKUP_NAME = 'rickey-ai-agent-backup.json';
 
 async function findDriveBackupId() {
+  await ensureFreshGoogleToken();
   const q = encodeURIComponent(`name='${DRIVE_BACKUP_NAME}' and trashed=false`);
   const r = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&spaces=drive&fields=files(id,modifiedTime)&orderBy=modifiedTime desc`, {
     headers: { Authorization: 'Bearer ' + gAccessToken }
@@ -3922,8 +3926,8 @@ function renderRateChart() {
 // INIT
 // ============================================================
 // App version + build stamp (shown small under the title)
-const APP_VERSION = 'v3.3.0';
-const APP_BUILD = '2026-06-21 16:00 IST';
+const APP_VERSION = 'v3.4.0';
+const APP_BUILD = '2026-06-21 16:30 IST';
 (function showVersion(){
   const el = document.getElementById('app-version-line');
   if (el) el.textContent = APP_VERSION + ' • ' + APP_BUILD;
@@ -4086,9 +4090,11 @@ function initGoogleTab() {
   const inp = document.getElementById('g-client-id');
   if (inp) inp.value = gClientId;
 
-  // If already have token restore session
-  if (gAccessToken && gClientId) {
-    loadGoogleIdentityScript(() => setupTokenClient(true));
+  // If already have a session, restore it — refreshing first if the access
+  // token looks expired (or is about to, within 2 minutes), so the person
+  // never sees a sign-in screen just from reopening the app.
+  if ((gAccessToken || gRefreshToken) && gClientId) {
+    loadGoogleIdentityScript(() => restoreGoogleSession());
   }
 }
 
@@ -4101,14 +4107,120 @@ function loadGoogleIdentityScript(cb) {
   document.head.appendChild(s);
 }
 
+// Restores a Google session on app open: if we have a refresh token and the
+// Worker is configured, refresh silently (no popup, ever). Otherwise fall
+// back to the old token-client silent-refresh attempt, which may still show
+// the account picker on some mobile browsers — this is the pre-fix behavior
+// and only happens if the one-time refresh-token setup hasn't been done.
+function restoreGoogleSession() {
+  const now = Date.now();
+  if (gAccessToken && gTokenExpiresAt && now < gTokenExpiresAt - 120000) {
+    // Still valid for at least 2 more minutes — just use it.
+    fetchGoogleProfile();
+    return;
+  }
+  if (gRefreshToken && getRatesWorkerUrl()) {
+    refreshGoogleAccessToken().then(ok => {
+      if (ok) fetchGoogleProfile();
+      else showToast('Google session expired — please reconnect');
+    });
+    return;
+  }
+  if (gAccessToken) {
+    // Old-style session with no refresh token on file — try a silent
+    // token-client refresh as before (may show account picker on mobile).
+    setupTokenClient(true);
+  }
+}
+
+// Silently exchanges the stored refresh token for a new access token via
+// the Worker's /google-token endpoint (which holds the Client Secret).
+// Returns true/false instead of throwing, so callers can decide what to do.
+async function refreshGoogleAccessToken() {
+  const base = getRatesWorkerUrl();
+  if (!base || !gRefreshToken) return false;
+  try {
+    const res = await fetch(base + '/google-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ grant_type: 'refresh_token', refresh_token: gRefreshToken }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.access_token) return false;
+    gAccessToken = data.access_token;
+    gTokenExpiresAt = Date.now() + (data.expires_in || 3600) * 1000;
+    localStorage.setItem('g_access_token', gAccessToken);
+    localStorage.setItem('g_token_expires_at', String(gTokenExpiresAt));
+    return true;
+  } catch (e) { return false; }
+}
+
+// Entry point for the "Connect Google Account" button — this is the ONE
+// time the person will see Google's consent screen (assuming the Worker is
+// configured with a Client Secret; see Memory DB tab for setup status).
 function initGoogleAuth() {
   const clientId = document.getElementById('g-client-id').value.trim();
   if (!clientId) { showToast('Paste your Client ID first'); return; }
   gClientId = clientId;
   localStorage.setItem('g_client_id', clientId);
-  loadGoogleIdentityScript(() => setupTokenClient(false));
+  loadGoogleIdentityScript(() => {
+    if (getRatesWorkerUrl()) {
+      requestGoogleAuthCode();
+    } else {
+      showToast('⚠️ Set your Rates Source worker URL first (Memory DB tab) to enable permanent sign-in');
+      setupTokenClient(false);
+    }
+  });
 }
 
+// Code-flow sign-in: gets a one-time authorization code from Google, then
+// sends it to the Worker to exchange for an access token + a long-lived
+// refresh token. access_type:'offline' + prompt:'consent' is required by
+// Google to guarantee a refresh token is actually issued.
+function requestGoogleAuthCode() {
+  gCodeClient = google.accounts.oauth2.initCodeClient({
+    client_id: gClientId,
+    scope: GSCOPES,
+    ux_mode: 'popup',
+    access_type: 'offline',
+    prompt: 'consent',
+    callback: async (resp) => {
+      if (resp.error) { showToast('❌ Auth failed: ' + resp.error); return; }
+      const base = getRatesWorkerUrl();
+      try {
+        const res = await fetch(base + '/google-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            grant_type: 'authorization_code',
+            code: resp.code,
+            redirect_uri: window.location.origin,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.access_token) {
+          showToast('❌ Sign-in failed: ' + (data.error_description || data.error || 'unknown error'));
+          return;
+        }
+        gAccessToken = data.access_token;
+        localStorage.setItem('g_access_token', gAccessToken);
+        gTokenExpiresAt = Date.now() + (data.expires_in || 3600) * 1000;
+        localStorage.setItem('g_token_expires_at', String(gTokenExpiresAt));
+        if (data.refresh_token) {
+          gRefreshToken = data.refresh_token;
+          localStorage.setItem('g_refresh_token', gRefreshToken);
+        }
+        fetchGoogleProfile();
+      } catch (e) {
+        showToast('❌ Could not reach Worker for sign-in: ' + e.message);
+      }
+    },
+  });
+  gCodeClient.requestCode();
+}
+
+// Legacy token-client flow — kept as a fallback for when the Worker isn't
+// configured with a Client Secret yet (no refresh token possible).
 function setupTokenClient(silent) {
   gTokenClient = google.accounts.oauth2.initTokenClient({
     client_id: gClientId,
@@ -4116,7 +4228,9 @@ function setupTokenClient(silent) {
     callback: (resp) => {
       if (resp.error) { showToast('❌ Auth failed: ' + resp.error); return; }
       gAccessToken = resp.access_token;
+      gTokenExpiresAt = Date.now() + (resp.expires_in || 3600) * 1000;
       localStorage.setItem('g_access_token', gAccessToken);
+      localStorage.setItem('g_token_expires_at', String(gTokenExpiresAt));
       fetchGoogleProfile();
     }
   });
@@ -4148,11 +4262,28 @@ function fetchGoogleProfile() {
   });
 }
 
+// Call this before any Google API request. Proactively refreshes the
+// access token if it's expired or expiring within 2 minutes, using the
+// stored refresh token — completely silent, no popup. If there's no
+// refresh token on file (Worker not yet configured, or old-style session),
+// this is a no-op and the existing 401-retry handling in each caller still
+// applies as a fallback.
+async function ensureFreshGoogleToken() {
+  if (!gRefreshToken) return;
+  const now = Date.now();
+  if (gAccessToken && gTokenExpiresAt && now < gTokenExpiresAt - 120000) return;
+  await refreshGoogleAccessToken();
+}
+
 function gSignOut() {
   if (!confirm('Disconnect Google account?')) return;
   if (gAccessToken) google.accounts.oauth2.revoke(gAccessToken, () => {});
   gAccessToken = '';
+  gRefreshToken = '';
+  gTokenExpiresAt = 0;
   localStorage.removeItem('g_access_token');
+  localStorage.removeItem('g_refresh_token');
+  localStorage.removeItem('g_token_expires_at');
   document.getElementById('g-setup-panel').style.display = 'block';
   document.getElementById('g-connected-panel').style.display = 'none';
   document.getElementById('gs-auth').innerHTML = '<span class="g-dot disconnected"></span><span>Not connected</span>';
@@ -4164,6 +4295,7 @@ function gSignOut() {
 // ---- GOOGLE CONTACTS ----
 async function importGoogleContacts() {
   if (!gAccessToken) { showToast('Connect Google first'); return; }
+  await ensureFreshGoogleToken();
   const status = document.getElementById('g-contacts-status');
   status.style.display = 'block'; status.textContent = '⏳ Fetching contacts...';
   try {
@@ -4207,6 +4339,7 @@ async function importGoogleContacts() {
 // ---- GOOGLE TASKS ----
 async function pushTodosToGoogleTasks() {
   if (!gAccessToken) { showToast('🔑 Connect Google first (Google tab)'); return; }
+  await ensureFreshGoogleToken();
   const status = document.getElementById('g-tasks-status');
   const setStatus = (msg, color) => { if (status) { status.style.display = 'block'; status.textContent = msg; if (color) status.style.color = color; } };
   setStatus('⏳ Syncing to Google Tasks...', 'var(--muted)');
@@ -4290,6 +4423,7 @@ async function pushTodosToGoogleTasks() {
 // ---- GOOGLE CALENDAR ----
 async function pushRemindersToCalendar() {
   if (!gAccessToken) { showToast('Connect Google first'); return; }
+  await ensureFreshGoogleToken();
   const status = document.getElementById('g-cal-status');
   status.style.display = 'block'; status.textContent = '⏳ Pushing to Google Calendar...';
   const pending = reminders.filter(r => r.dueDate && !r.done);
@@ -4369,6 +4503,7 @@ Return ONLY the email body text — no subject line, no greeting header, just th
 
 async function sendGmail() {
   if (!gAccessToken) { showToast('Connect Google first'); return; }
+  await ensureFreshGoogleToken();
   const to = document.getElementById('g-email-to').value.trim();
   const subject = document.getElementById('g-email-subject').value.trim();
   if (!to || !subject || !gEmailBody) { showToast('Fill To, Subject and generate email first'); return; }
